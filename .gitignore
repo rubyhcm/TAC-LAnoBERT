@@ -13,6 +13,7 @@ checkpoints/
 *.model
 cached_*
 results-me-main.zip
+prompt-me.md
 
 # python
 __pycache__/
