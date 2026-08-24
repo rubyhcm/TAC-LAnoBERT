@@ -28,7 +28,21 @@ Nằm ngoài phạm vi của tài liệu đặc tả này là các yếu tố th
 
 Theo góc nhìn cấu trúc (Structure Viewpoint) của IEEE 1016, kiến trúc mã nguồn được phân rã thành các gói (packages) và mô-đun (modules) độc lập, tuân thủ nguyên tắc thiết kế mạch lạc và kết dính cao3. Hệ thống áp dụng biến thể của mô hình kiến trúc phân tầng (Layered Architecture) chuyên biệt cho 파pelien học máy, tách rời tầng quản lý dữ liệu, tầng mô hình học sâu, tầng thuật toán truy hồi và tầng đánh giá thực nghiệm2.  
 Sơ đồ thư mục dự án được cấu trúc như sau:  
-tac\_lanobert\_project/ ├── configs/ \# Lưu trữ toàn bộ siêu tham số định dạng YAML ├── data/ \# Giao diện tải và tiền xử lý dữ liệu viễn trắc ├── baseline/ \# Cài đặt nguyên bản của phương pháp LAnoBERT ├── improvement/ \# Các lớp mạng nơ-ron mở rộng (Time2Vec, Hybrid Scorer) ├── retrieval/ \# Cấu trúc dữ liệu Hàng đợi và thuật toán thống kê (Welford) ├── models/ \# Điểm nối tích hợp Transformer và bộ điều phối Forward Pass ├── detection/ \# Thuật toán tính ngưỡng cực trị động (EVT/POT) ├── evaluation/ \# Khung đo lường định thời lượng (DLT, FPR, PR-AUC) ├── experiments/ \# Bộ điều phối các chế độ chạy (Runner/Orchestrator) ├── tests/ \# Kịch bản kiểm thử tự động (Unit, Integration, Regression) ├── artifacts/ \# Điểm xuất kết quả, weights, logs và metadata phiên bản └── docs/ \# Hệ thống tài liệu kỹ thuật và hướng dẫn sử dụng  
+```text
+tac_lanobert_project/
+├── configs/      # Lưu trữ toàn bộ siêu tham số định dạng YAML
+├── data/         # Giao diện tải và tiền xử lý dữ liệu viễn trắc
+├── baseline/     # Cài đặt nguyên bản của phương pháp LAnoBERT
+├── improvement/  # Các lớp mạng nơ-ron mở rộng (Time2Vec, Hybrid Scorer)
+├── retrieval/    # Cấu trúc dữ liệu Hàng đợi và thuật toán thống kê (Welford)
+├── models/       # Điểm nối tích hợp Transformer và bộ điều phối Forward Pass
+├── detection/    # Thuật toán tính ngưỡng cực trị động (EVT/POT)
+├── evaluation/   # Khung đo lường định thời lượng (DLT, FPR, PR-AUC)
+├── experiments/  # Bộ điều phối các chế độ chạy (Runner/Orchestrator)
+├── tests/        # Kịch bản kiểm thử tự động (Unit, Integration, Regression)
+├── artifacts/    # Điểm xuất kết quả, weights, logs và metadata phiên bản
+└── docs/         # Hệ thống tài liệu kỹ thuật và hướng dẫn sử dụng
+```
 Để làm rõ trách nhiệm và trạng thái của từng thành phần trong bối cảnh nâng cấp có mục tiêu, một bảng đặc tả kiến trúc được thiết lập:
 
 | Thư mục/Mô-đun | Trách nhiệm Kiến trúc | Trạng thái (Phân loại) |
