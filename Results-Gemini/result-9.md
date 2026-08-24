@@ -97,7 +97,25 @@ Thời gian phản biện trung bình của các tạp chí Q1 (như *Applied So
 ## **8\. Gói Hiện Vật Phần Mềm (Artifact Package)**
 
 Nhằm chinh phục các huy hiệu **"Reusable"** (Có thể tái sử dụng) và **"Available"** (Có sẵn) từ Hội đồng Đánh giá Hiện vật ICSE (Artifact Evaluation Committee)6, dự án thiết lập một gói mã nguồn tự thân vô cùng khắt khe. ICSE yêu cầu hiện vật phải được ghi tài liệu cẩn thận, nhất quán, hoàn chỉnh, có thể thực thi, và đặc biệt là quá trình cài đặt không được vượt quá 30 phút11.  
-Cấu trúc thư mục tối thiểu của gói tac_lanobert_artifact/ được thiết kế như sau: tac_lanobert_artifact/ ├── README.md \# Hướng dẫn chi tiết cài đặt và khởi chạy (Quick-start guide) ├── CITATION.cff \# Siêu dữ liệu để trích dẫn chuẩn hóa6 ├── LICENSE \# Giấy phép nguồn mở (ví dụ: MIT/Apache) ├── configs/ \# Các tệp YAML chứa tham số cố định (dataset, model, experiment) ├── data_reference/ \# Script tải và bộ tiền xử lý Chronological Split cho BGL/Thunderbird ├── baseline/ \# Mã nguồn LAnoBERT kế thừa (Parser-free BERT + MLM) ├── improvement/ \# Lớp Time2Vec, Continual Memory Queue, thuật toán Welford ├── scripts/ \# Kịch bản chạy tự động (run_baseline.sh, run_ablation.sh) ├── experiments/ \# Trình điều phối luồng Forward Pass và Dependency Injection ├── results/ \# Đầu ra CSV thô (Điểm MLM, Khoảng cách Mahalanobis, Timestamp) ├── figures/ \# Các đồ thị tự động sinh (DLT Dist, PR-AUC Curve) ├── logs/ \# TensorBoard logs, cảnh báo tài nguyên hệ thống (Latency profiling) ├── tests/ \# Unit tests kiểm định ma trận Welford và Time2Vec tensor ├── docs/ \# Kiến trúc toán học và Traceability Matrix └── reproducibility.md \# Lược đồ đối chiếu: Cấu hình -> Thực nghiệm -> Biểu đồ Luận văn  
+Cấu trúc thư mục tối thiểu của gói tac_lanobert_artifact/ được thiết kế như sau:
+```text
+tac_lanobert_artifact/
+├── README.md         # Hướng dẫn chi tiết cài đặt và khởi chạy (Quick-start guide)
+├── CITATION.cff      # Siêu dữ liệu để trích dẫn chuẩn hóa6
+├── LICENSE           # Giấy phép nguồn mở (ví dụ: MIT/Apache)
+├── configs/          # Các tệp YAML chứa tham số cố định (dataset, model, experiment)
+├── data_reference/   # Script tải và bộ tiền xử lý Chronological Split cho BGL/Thunderbird
+├── baseline/         # Mã nguồn LAnoBERT kế thừa (Parser-free BERT + MLM)
+├── improvement/      # Lớp Time2Vec, Continual Memory Queue, thuật toán Welford
+├── scripts/          # Kịch bản chạy tự động (run_baseline.sh, run_ablation.sh)
+├── experiments/      # Trình điều phối luồng Forward Pass và Dependency Injection
+├── results/          # Đầu ra CSV thô (Điểm MLM, Khoảng cách Mahalanobis, Timestamp)
+├── figures/          # Các đồ thị tự động sinh (DLT Dist, PR-AUC Curve)
+├── logs/             # TensorBoard logs, cảnh báo tài nguyên hệ thống (Latency profiling)
+├── tests/            # Unit tests kiểm định ma trận Welford và Time2Vec tensor
+├── docs/             # Kiến trúc toán học và Traceability Matrix
+└── reproducibility.md # Lược đồ đối chiếu: Cấu hình -> Thực nghiệm -> Biểu đồ Luận văn
+```
 Một bộ chứa Docker (Docker container image) chứa sẵn hệ điều hành, trình điều khiển CUDA và các thư viện phụ thuộc (requirements.txt) sẽ được cung cấp để loại trừ lỗi môi trường6. Mọi tệp dữ liệu kiểm thử mô phỏng (toy datasets) phải được tích hợp để hội đồng có thể chạy kịch bản luồng từ đầu đến cuối (end-to-end workflow) và tái tạo chính xác các đồ thị phân phối DLT mà luận văn báo cáo. Các siêu tham số nhạy cảm như Kích thước Hàng đợi (Memory Queue Size), Tỷ lệ che khuất (Masking Ratio) và hạt giống ngẫu nhiên (random_seed = 42) được khóa chặt trong thư mục configs/2.
 
 ## **9\. Danh Sách Kiểm Tra Tính Tái Lập (Reproducibility Checklist)**
