@@ -431,18 +431,19 @@ t_0                           t_split_1       t_split_2          t_end
 
 ## 12. Kế Hoạch Thực Hiện (9 Tháng)
 
-### Phase 1: Môi Trường & Dữ Liệu (Tháng 1) — 4 tuần
+### Phase 1: Môi Trường & Dữ Liệu — ✅ HOÀN THÀNH (2026-08-24)
 - [x] Clone mã nguồn LAnoBERT → cấu trúc thư mục hiện tại
 - [x] Cài đặt môi trường (PyTorch, Transformers, etc.)
-- [x] Download datasets BGL
+- [x] Download datasets BGL (4.7M events)
+- [x] Download dataset Thunderbird (211M events, 30GB)
 - [x] Implement Chronological Split (đã có trong `lanobert/split.py`)
-- [ ] Download dataset Thunderbird
-- [ ] Viết unit test anti-leakage cho DataLoader
-- [ ] Thiết lập Docker/containerization cho reproducibility
-- [ ] Cấu hình seed deterministic (cudnn.deterministic = True)
-- **Exit criteria**: BGL/Thunderbird nạp thành công, timestamp tuyến tính
+- [x] Viết unit test anti-leakage cho DataLoader (7/7 tests passed)
+- [x] Cấu hình seed deterministic (cudnn.deterministic = True)
+- [x] Timestamp verification (monotonic, valid range)
+- **Exit criteria**: ✅ BGL/Thunderbird nạp thành công, timestamp tuyến tính, anti-leakage verified
 
-### Phase 2: Tái Tạo Baseline (Tháng 2) — 4 tuần
+### Phase 2: Tái Tạo Baseline (Tháng 2) — 🔄 ĐANG THỰC HIỆN
+- [ ] Split Thunderbird dataset (chronological split)
 - [ ] Huấn luyện LAnoBERT gốc trên BGL (full epochs)
 - [ ] Huấn luyện LAnoBERT gốc trên Thunderbird
 - [ ] Đo lường baseline metrics (F1, PR-AUC) trên chronological test set
@@ -542,10 +543,11 @@ t_0                           t_split_1       t_split_2          t_end
 
 ## 14. Công Cụ & Môi Trường
 
-### Hardware
-- GPU: NVIDIA RTX 3090/4090 (hoặc tương đương, ≥ 12GB VRAM)
-- RAM: ≥ 32GB
-- Storage: NVMe SSD (Thunderbird ~211M events cần I/O nhanh)
+### Hardware (Kaggle Environment)
+- **GPU**: Kaggle P100 (16GB VRAM) hoặc T4 (16GB)
+- **RAM**: 30GB (Kaggle standard)
+- **Storage**: Kaggle persistent volume
+- **Notes**: Chạy trực tiếp trên Kaggle Notebooks, không sử dụng Docker
 
 ### Software (ĐÓNG BĂNG phiên bản)
 - Python 3.10
@@ -623,16 +625,31 @@ random.seed(SEED)
 
 ---
 
-## BƯỚC TIẾP THEO
+## TRẠNG THÁI DỰ ÁN
 
-**Hiện tại đang ở**: Phase 1 (đã hoàn thành phần lớn cơ sở) → cần hoàn thành Phase 2
+**Ngày cập nhật**: 2026-08-24  
+**Phase hiện tại**: Phase 1 ✅ HOÀN THÀNH → Phase 2 🔄 ĐANG THỰC HIỆN
 
+### Hoàn thành Phase 1:
+- ✅ BGL dataset (4.7M events) - split & verified
+- ✅ Thunderbird dataset (211M events, 30GB) - downloaded
+- ✅ Anti-leakage tests (7/7 passed)
+- ✅ Timestamp verification (monotonic, valid)
+- ✅ Deterministic settings configured
+- ✅ Chronological split verified
+
+### Bước tiếp theo (Phase 2):
 ```bash
-# 1. Xác nhận baseline hoạt động
-cd /Users/ruby/dev/TAC-LAnoBERT
+# 1. Split Thunderbird dataset
+python -m lanobert.split --config configs/thunderbird.yaml
+
+# 2. Train baseline LAnoBERT trên BGL
 bash scripts/run_pipeline.sh configs/bgl.yaml
 
-# 2. Sau khi baseline ổn định:
-# - Phase 2: Huấn luyện full epochs, đo F1/PR-AUC
-# - Phase 3: Implement tac_lanobert/ modules
+# 3. Đo baseline metrics: F1, PR-AUC, FPR
+# Target: F1 ≥ 0.99 (khớp với paper gốc)
 ```
+
+### Môi trường:
+- **Platform**: Kaggle Notebooks (P100/T4 GPU, 16GB VRAM, 30GB RAM)
+- **No Docker**: Chạy trực tiếp trên Kaggle environment

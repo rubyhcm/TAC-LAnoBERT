@@ -1,22 +1,77 @@
 <div align="center">
 
-# LAnoBERT: System Log Anomaly Detection based on BERT Masked Language Model (ASC 2023)
+# TAC-LAnoBERT: Time-Aware Continual Log Anomaly Detection
 
 [![Paper](https://img.shields.io/badge/Paper-Applied%20Soft%20Computing%202023-blue)](https://doi.org/10.1016/j.asoc.2023.110689) [![arXiv](https://img.shields.io/badge/arXiv-2111.09564-red)](https://arxiv.org/abs/2111.09564) [![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20Models-yukyung%2FLAnoBERT-yellow)](https://huggingface.co/yukyung/LAnoBERT)
 
-**Yukyung Lee**, **Jina Kim**, **Pilsung Kang**
+**Enhanced Log Anomaly Detection with Temporal Dynamics and Session Memory**
 
-Korea University
+**Phase 1: ✅ Complete** | **Phase 2: 🔄 In Progress**
 
 </div>
 
-This is the official implementation of **LAnoBERT**, a **parser-free** approach to system log anomaly detection. Unlike methods that depend on a log parser, LAnoBERT trains a BERT encoder from scratch on *normal* logs using the masked language modeling (MLM) objective. At inference it masks each word of a log line and measures how surprised the model is by the true token; lines the model finds surprising are flagged as anomalies.
+---
 
-It is evaluated on the BGL, HDFS, and Thunderbird log datasets, with pretrained checkpoints available on the HuggingFace Hub ([`yukyung/LAnoBERT`](https://huggingface.co/yukyung/LAnoBERT)).
+## 🎯 Project Overview
 
-> **What's new in this release.** The code is updated to the latest `transformers` / `torch`, every model is re-trained from scratch, and the checkpoints are released on the Hub.
+**TAC-LAnoBERT** extends the original [LAnoBERT](https://doi.org/10.1016/j.asoc.2023.110689) (ASC 2023, Q1) to enable **Early Log Anomaly Detection (ELAD)** through:
 
-## How it works
+1. **Time-Aware (T)**: Time2Vec embedding for physical time dynamics
+2. **Continual Memory (C)**: Session Memory Queue with Mahalanobis distance for long-range context
+3. **Proactive Scoring**: Hybrid MLM Loss + Mahalanobis distance for early warning
+
+### Research Goal
+
+Transform **reactive anomaly detection** into **proactive early warning system** that can:
+- Alert *before* system failures occur (Detection Lead Time > 0)
+- Reduce False Positive Rate in dynamic workload scenarios
+- Maintain parser-free simplicity and reproducibility
+
+---
+
+## 🚀 Quick Start (Phase 1 Complete)
+
+### Prerequisites
+```bash
+# Python 3.10+, PyTorch 2.1+, CUDA 12.1+
+pip install -r requirements.txt
+```
+
+### Verify Phase 1 Setup
+```bash
+# Run comprehensive verification
+bash scripts/verify_phase1.sh
+```
+
+This checks:
+- ✅ Directory structure
+- ✅ Datasets (BGL, Thunderbird)
+- ✅ Anti-leakage tests (7/7)
+- ✅ Timestamp validity
+- ✅ Reproducibility settings
+
+### Docker Setup (Recommended)
+```bash
+# Build and run container
+docker-compose build
+docker-compose up -d
+docker exec -it tac-lanobert-dev bash
+
+# Inside container
+bash scripts/verify_phase1.sh
+```
+
+See [`DOCKER_SETUP.md`](DOCKER_SETUP.md) for details.
+
+### Run Baseline (Phase 2)
+```bash
+# Train LAnoBERT baseline on BGL
+bash scripts/run_pipeline.sh configs/bgl.yaml
+```
+
+---
+
+## 📊 Baseline: LAnoBERT
 
 1. **Preprocess.** A simple regular-expression-based step replaces variable fields with placeholder tokens.
 2. **Train.** A WordPiece tokenizer and BERT are trained from scratch on the normal logs with MLM.
