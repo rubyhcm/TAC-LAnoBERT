@@ -21,7 +21,26 @@ from .scoring import HybridProactiveScorer
 
 @dataclass
 class TACConfig:
-    """Configuration for TAC-LAnoBERT features."""
+    """Configuration for TAC-LAnoBERT features.
+    
+    The `mode` parameter provides preset configurations:
+    - 'baseline': Pure LAnoBERT (no TAC features) - disable_time2vec=True, enable_memory=False
+    - 'time_only': Time2Vec only - enable_time2vec=True, enable_memory=False
+    - 'memory_only': Memory Queue only - enable_time2vec=False, enable_memory=True
+    - 'full': Full TAC (Time2Vec + Memory) - enable_time2vec=True, enable_memory=True
+    
+    Note: The `mode` parameter overrides individual enable_* flags in `_apply_mode_flags()`.
+    If you need custom combinations, instantiate with desired individual flags and 
+    don't call `_apply_mode_flags()`, or set flags after initialization.
+    
+    Example:
+        >>> # Use preset mode
+        >>> config = TACConfig(mode='full')  # Both features enabled
+        >>> 
+        >>> # Custom combination (advanced)
+        >>> config = TACConfig(mode='full', enable_time2vec=True, enable_memory=False)
+        >>> # After _apply_mode_flags(), both will be True (mode overrides)
+    """
     
     # Mode selection
     mode: str = "full"  # baseline | time_only | memory_only | full
@@ -180,7 +199,8 @@ class TACLAnoBERT(nn.Module):
         delta_t: Optional[torch.Tensor] = None,
         labels: Optional[torch.Tensor] = None,
         output_hidden_states: bool = False,
-        return_dict: bool = True
+        return_dict: bool = True,
+        **kwargs,  # Accept extra fields from Trainer batch (e.g. special_tokens_mask)
     ):
         """
         Forward pass with optional Time2Vec embedding.

@@ -222,16 +222,56 @@ def _options_from_config(cfg) -> ParseOptions:
     )
 
 
-def preprocess_file(in_path: str, out_path: str, opt: ParseOptions) -> int:
-    """Normalize every line of `in_path` and write to `out_path`. Returns line count."""
+def preprocess_file(
+    in_path: str,
+    out_path: str,
+    opt: ParseOptions,
+    extract_timestamps: bool = False,
+    log_format: str = "bgl",
+) -> int:
+    """Normalize every line of `in_path` and write to `out_path`. Returns line count.
+    
+    Args:
+        in_path: Input raw log file path
+        out_path: Output normalized log file path
+        opt: Preprocessing options
+        extract_timestamps: If True, extract timestamps and save to .timestamps file
+        log_format: Log format for timestamp extraction ('bgl', 'thunderbird', 'hdfs')
+    
+    Returns:
+        Number of lines processed
+    """
     ensure_dir(os.path.dirname(out_path) or ".")
+    
     n = 0
-    with open(out_path, "w", encoding="utf-8") as out:
-        for line in tqdm(iter_lines(in_path), desc=f"parse {os.path.basename(in_path)}"):
-            norm = normalize_line(line, opt)
-            if norm:
-                out.write(norm + "\n")
-                n += 1
+    
+    if extract_timestamps:
+        # Import TAC module conditionally
+        from tac_lanobert.time_delta import TimestampExtractor
+        ts_extractor = TimestampExtractor(log_format=log_format)
+        timestamp_path = os.path.splitext(out_path)[0] + ".timestamps"
+        
+        # Use context managers for both files
+        with open(out_path, "w", encoding="utf-8") as out, \
+             open(timestamp_path, "w", encoding="utf-8") as ts_file:
+            for line in tqdm(iter_lines(in_path), desc=f"parse {os.path.basename(in_path)}"):
+                norm = normalize_line(line, opt)
+                if norm:
+                    out.write(norm + "\n")
+                    ts = ts_extractor.extract_timestamp(line)
+                    ts_file.write(f"{ts if ts is not None else 0.0}\n")
+                    n += 1
+        
+        print(f"[preprocess] saved timestamps -> {timestamp_path}")
+    else:
+        # Original path without timestamp extraction
+        with open(out_path, "w", encoding="utf-8") as out:
+            for line in tqdm(iter_lines(in_path), desc=f"parse {os.path.basename(in_path)}"):
+                norm = normalize_line(line, opt)
+                if norm:
+                    out.write(norm + "\n")
+                    n += 1
+    
     return n
 
 
@@ -246,6 +286,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     )
     parser.add_argument("--in_path", default=None, help="override input log path")
     parser.add_argument("--out_path", default=None, help="override output path")
+    parser.add_argument("--extract_timestamps", action="store_true", 
+                        help="extract timestamps for TAC-LAnoBERT")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -259,10 +301,18 @@ def main(argv: Optional[List[str]] = None) -> None:
         in_path = args.in_path or cfg.get_path("paths.test_raw")
         out_path = args.out_path or cfg.get_path("paths.test_log")
 
+    # Check config for TAC mode
+    extract_timestamps = args.extract_timestamps or bool(cfg.get("tac", {}).get("enabled", False))
+    log_format = cfg.get("dataset", "bgl").lower()
+
     print(f"[preprocess] {cfg.get('dataset')} / {args.split}")
     print(f"[preprocess] in : {in_path}")
     print(f"[preprocess] out: {out_path}")
-    count = preprocess_file(in_path, out_path, opt)
+    if extract_timestamps:
+        print(f"[preprocess] TAC mode: extracting timestamps (format={log_format})")
+    count = preprocess_file(in_path, out_path, opt, 
+                          extract_timestamps=extract_timestamps,
+                          log_format=log_format)
     print(f"[preprocess] wrote {count} lines")
 
 
