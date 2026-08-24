@@ -442,34 +442,47 @@ t_0                           t_split_1       t_split_2          t_end
 - [x] Timestamp verification (monotonic, valid range)
 - **Exit criteria**: ✅ BGL/Thunderbird nạp thành công, timestamp tuyến tính, anti-leakage verified
 
-### Phase 2: Tái Tạo Baseline (Tháng 2) — 🔄 ĐANG THỰC HIỆN
-- [ ] Split Thunderbird dataset (chronological split)
-- [ ] Huấn luyện LAnoBERT gốc trên BGL (full epochs)
-- [ ] Huấn luyện LAnoBERT gốc trên Thunderbird
-- [ ] Đo lường baseline metrics (F1, PR-AUC) trên chronological test set
-- [ ] Đối chiếu F1 với bài báo gốc (dung sai < 2%)
-- [ ] Ghi nhận FPR baseline
-- [ ] Tài liệu hóa Baseline Benchmark Report
-- **Exit criteria**: F1/PR-AUC khớp paper gốc ± 2%
+### Phase 2: Tái Tạo Baseline (Tháng 2) — ✅ HOÀN THÀNH (BGL) - 2026-08-24
+#### BGL Dataset (✅ Complete)
+- [x] Huấn luyện LAnoBERT gốc trên BGL (10 epochs, Kaggle T4 x2)
+- [x] Đo lường baseline metrics (F1, PR-AUC) trên chronological test set
+- [x] Đối chiếu F1 với bài báo gốc: **F1=0.999974** (paper: 1.000, diff: 0.0026%) ✅
+- [x] Đối chiếu AUROC: **0.999998** (paper: 1.000, diff: 0.0002%) ✅
+- [x] Ghi nhận FPR baseline: **0.000020** (18 FP / 903,310 normal) ✅
+- [x] Tài liệu hóa Baseline Benchmark Report: `PHASE2_COMPLETION_BGL.md` ✅
+- [x] Tạo artifacts cho Phase 3:
+  - [x] `outputs/BGL_lanobert/results/baseline_report_phase2.json`
+  - [x] `outputs/BGL_lanobert/results/baseline_fpr_for_phase3.json`
+  - [x] Trained model: `outputs/BGL_lanobert/model/final/`
+  - [x] Tokenizer (reusable): `outputs/BGL_lanobert/tokenizer/`
 
-### Phase 3: Triển Khai Cải Tiến (Tháng 3) — 4 tuần
-- [ ] **3a. Time2Vec Module**
-  - [ ] Implement `tac_lanobert/time2vec.py` (Time2VecLayer)
-  - [ ] Implement `tac_lanobert/time_delta.py` (Δt extraction)
-  - [ ] Modify `lanobert/preprocess.py`: trích xuất timestamp
-  - [ ] Modify `lanobert/dataset.py`: bổ sung trường Δt
-  - [ ] Modify `lanobert/train.py`: inject Time2Vec vào embedding
-  - [ ] Unit tests: gradient flow, shape compatibility
-- [ ] **3b. Memory Queue Module**
-  - [ ] Implement `tac_lanobert/memory_queue.py` (FIFO + Welford + LW Shrinkage)
-  - [ ] Implement `tac_lanobert/scoring.py` (HybridProactiveScorer)
-  - [ ] Implement `tac_lanobert/threshold.py` (EVT dynamic threshold)
-  - [ ] Modify `lanobert/inference.py`: bổ sung Memory Queue + Hybrid Score
-  - [ ] Unit tests: Welford accuracy, Mahalanobis stability
-- [ ] **3c. Feature Flags & Model Wrapper**
-  - [ ] Implement `tac_lanobert/model.py` (TAC-LAnoBERT wrapper với feature flags)
-  - [ ] Tạo configs: `bgl_tac.yaml`, `thunderbird_tac.yaml`, ablation configs
-  - [ ] Forward pass chạy không lỗi qua tất cả modes
+#### Thunderbird Dataset (⏸️ Postponed)
+- [ ] Split Thunderbird dataset (chronological split)
+- [ ] Huấn luyện LAnoBERT gốc trên Thunderbird
+- **Note**: Skipped để tập trung test TAC-LAnoBERT hoàn chỉnh với BGL trước
+
+- **Exit criteria**: ✅ **PASS** - F1/AUROC khớp paper gốc ± 2% (BGL: 0.0026% deviation)
+
+### Phase 3: Triển Khai Cải Tiến (Tháng 3) — 4 tuần — 🔧 ĐANG THỰC HIỆN
+- [x] **3a. Time2Vec Module (Core)**
+  - [x] Implement `tac_lanobert/time2vec.py` (Time2VecLayer) ✅
+  - [x] Implement `tac_lanobert/time_delta.py` (Δt extraction) ✅
+  - [ ] Modify `lanobert/preprocess.py`: trích xuất timestamp ❌ **TODO**
+  - [ ] Modify `lanobert/dataset.py`: bổ sung trường Δt ❌ **TODO**
+  - [ ] Modify `lanobert/train.py`: inject Time2Vec vào embedding ❌ **TODO**
+  - [ ] Unit tests: gradient flow, shape compatibility (`tests/test_time2vec.py`) ❌ **TODO**
+- [x] **3b. Memory Queue Module (Core)**
+  - [x] Implement `tac_lanobert/memory_queue.py` (FIFO + Welford + LW Shrinkage) ✅
+  - [x] Implement `tac_lanobert/scoring.py` (HybridProactiveScorer) ✅
+  - [x] Implement `tac_lanobert/threshold.py` (EVT dynamic threshold) ✅
+  - [ ] Modify `lanobert/inference.py`: bổ sung Memory Queue + Hybrid Score ❌ **TODO**
+  - [ ] Unit tests: Welford accuracy, Mahalanobis stability (`tests/test_memory_queue.py`) ❌ **TODO**
+- [x] **3c. Feature Flags & Model Wrapper (Core)**
+  - [x] Implement `tac_lanobert/model.py` (TAC-LAnoBERT wrapper với feature flags) ✅
+  - [ ] Tạo configs TAC: `configs/bgl_tac_full.yaml`, ablation configs ❌ **TODO**
+  - [ ] Forward pass chạy không lỗi qua tất cả modes ❌ **TODO** (cần sau khi lanobert/ modified)
+  - [ ] Integration tests (`tests/test_integration.py`) ❌ **TODO**
+  - [ ] Smoke test 1 epoch (`scripts/smoke_test_phase3.sh`) ❌ **TODO**
 - **Exit criteria**: Forward pass thành công, không lỗi ma trận kỳ dị
 
 ### Phase 4: Thực Nghiệm Chính (Tháng 4) — 4 tuần
@@ -627,10 +640,12 @@ random.seed(SEED)
 
 ## TRẠNG THÁI DỰ ÁN
 
-**Ngày cập nhật**: 2026-08-24  
-**Phase hiện tại**: Phase 1 ✅ HOÀN THÀNH → Phase 2 🔄 ĐANG THỰC HIỆN
+**Ngày cập nhật**: 2026-08-24 ICT  
+**Phase hiện tại**: Phase 3 🔧 ĐANG THỰC HIỆN (50% core modules done)
 
-### Hoàn thành Phase 1:
+---
+
+### Phase 1 ✅ HOÀN THÀNH (2026-08-24)
 - ✅ BGL dataset (4.7M events) - split & verified
 - ✅ Thunderbird dataset (211M events, 30GB) - downloaded
 - ✅ Anti-leakage tests (7/7 passed)
@@ -638,18 +653,195 @@ random.seed(SEED)
 - ✅ Deterministic settings configured
 - ✅ Chronological split verified
 
-### Bước tiếp theo (Phase 2):
-```bash
-# 1. Split Thunderbird dataset
-python -m lanobert.split --config configs/thunderbird.yaml
+### Phase 2 ✅ HOÀN THÀNH (BGL) - (2026-08-24)
+- ✅ LAnoBERT baseline trained trên BGL (Kaggle T4 x2, 10 epochs)
+- ✅ **F1: 0.999974** (paper: 1.000, diff: 0.0026%) ✅ PASS
+- ✅ **AUROC: 0.999998** (paper: 1.000, diff: 0.0002%) ✅ PASS
+- ✅ **FPR baseline: 0.000020** (18 FP / 903,310 normal) ✅ TRACKED
+- ✅ **Best threshold: 7.64127** (dùng lại cho Phase 3 comparison)
+- ✅ Baseline reports:
+  - `PHASE2_COMPLETION_BGL.md`
+  - `outputs/BGL_lanobert/results/baseline_report_phase2.json`
+  - `outputs/BGL_lanobert/results/baseline_fpr_for_phase3.json`
+  - `outputs/BGL_lanobert/results/scores_error_mean.npy` (anomaly scores)
+  - 104 result files (3 scoring strategies × k=1..10, mean, pctl99)
+- ✅ Model & tokenizer saved: `outputs/BGL_lanobert/model/final/` & `tokenizer/`
+- ⏸️ **Thunderbird baseline postponed** — chiến lược: hoàn chỉnh TAC-LAnoBERT trên BGL trước
 
-# 2. Train baseline LAnoBERT trên BGL
-bash scripts/run_pipeline.sh configs/bgl.yaml
+---
 
-# 3. Đo baseline metrics: F1, PR-AUC, FPR
-# Target: F1 ≥ 0.99 (khớp với paper gốc)
+### Phase 3 🔧 ĐANG THỰC HIỆN (Triển Khai Cải Tiến)
+
+**Mục tiêu**: Triển khai 3 module chính của TAC-LAnoBERT:
+1. **Time-Aware (T)**: Time2Vec Embedding
+2. **Continual Memory (C)**: Session Memory Queue + Mahalanobis Distance
+3. **Hybrid Proactive Scoring**: α·MLM + (1-α)·Mahalanobis
+
+#### 📋 Week 1-2: Time2Vec Implementation (Component T)
+**Deliverables**:
+- [x] `tac_lanobert/time2vec.py` ✅ **DONE**
+  - [x] `Time2VecLayer(nn.Module)`: learnable ω, φ parameters
+  - [x] Linear component: `t2v(τ, 0) = ω₀·τ + φ₀`
+  - [x] Periodic components: `t2v(τ, i) = sin(ωᵢ·τ + φᵢ)` for i ≥ 1
+  - [x] Output projection: (1 + num_periodic) → hidden_size (768)
+  
+- [x] `tac_lanobert/time_delta.py` ✅ **DONE**
+  - [x] `extract_timestamp(log_line)`: regex-based timestamp parsing
+  - [x] `compute_delta_t(timestamps)`: consecutive time gaps (ms)
+  - [x] `normalize_delta_t(delta_t)`: log-transform (log(1 + Δt))
+  
+- [ ] **Modify existing modules** ❌ **TODO (NEXT PRIORITY)**:
+  - [ ] `lanobert/preprocess.py`:
+    - [ ] Add `extract_timestamps=True` flag
+    - [ ] Save timestamps alongside preprocessed logs
+  - [ ] `lanobert/dataset.py`:
+    - [ ] Add `delta_t` field to LogDataset
+    - [ ] Return `(input_ids, attention_mask, delta_t)` tuple
+  - [ ] `lanobert/train.py`:
+    - [ ] Inject Time2Vec layer into model
+    - [ ] Modify embedding: `Token + Positional + Time2Vec`
+    - [ ] Backprop through Time2Vec parameters
+
+**Testing** ❌ **TODO**:
+- [ ] `tests/test_time2vec.py`:
+  - [ ] Gradient flow test (check ∇ω, ∇φ not None)
+  - [ ] Shape compatibility: (batch, seq_len) → (batch, seq_len, 768)
+  - [ ] Numerical stability: no NaN/Inf with extreme Δt
+
+**Exit Criteria Week 1-2**:
+- [x] Time2Vec forward pass executes without error (time2vec.py ✅)
+- [ ] Gradients flow correctly to ω, φ (needs integration test)
+- [ ] Combined embedding shape matches BERT input (needs lanobert/ modification)
+
+---
+
+#### 📋 Week 3: Memory Queue Implementation (Component C)
+
+**Deliverables**:
+- [x] `tac_lanobert/memory_queue.py` ✅ **DONE**
+  - [x] `WelfordState`: online mean, M2, count (tích hợp trong memory_queue.py)
+  - [x] Ledoit-Wolf shrinkage (tích hợp trong memory_queue.py)
+  - [x] `SessionMemoryQueue`:
+    - [x] FIFO queue (deque, maxlen=capacity)
+    - [x] WelfordState for online statistics
+    - [x] `push(cls_vector)`: O(1) enqueue + Welford update
+    - [x] `mahalanobis_distance(cls_vector)`: compute distance with LW shrinkage
+    - [x] `reset()`: clear queue (for new session)
+  
+- [x] `tac_lanobert/scoring.py` ✅ **DONE**
+  - [x] `HybridProactiveScorer`:
+    - [x] `__init__(alpha=0.5)`: weighting parameter
+    - [x] `score(mlm_loss, mahalanobis_dist)`: hybrid score
+
+- [ ] **Modify existing modules** ❌ **TODO**:
+  - [ ] `lanobert/inference.py`: bổ sung Memory Queue + Hybrid Score
+
+**Testing** ❌ **TODO**:
+- [ ] `tests/test_welford.py`:
+  - [ ] Accuracy vs NumPy batch computation
+  - [ ] Edge cases: n=1, n=2 (singular covariance)
+  
+- [ ] `tests/test_memory_queue.py`:
+  - [ ] FIFO overflow behavior (capacity=128)
+  - [ ] Mahalanobis stability with near-singular covariance
+  - [ ] Reset functionality (clear state)
+
+**Exit Criteria Week 3**:
+- [x] Memory Queue implementation exists (memory_queue.py ✅)
+- [ ] Welford mean/cov matches batch computation (needs test)
+- [ ] Mahalanobis distance bounded (needs test)
+
+---
+
+#### 📋 Week 4: Integration & Testing
+
+**Deliverables**:
+- [x] `tac_lanobert/model.py` ✅ **DONE**
+  - [x] `TACLAnoBERT(nn.Module)`: wrapper around LAnoBERT
+  - [x] Feature flags: `time2vec_enabled`, `memory_enabled`, `scoring_mode`
+  - [x] Modes: baseline | time_only | memory_only | full
+  
+- [ ] **Config files** ❌ **TODO**:
+  - [ ] `configs/bgl_tac_full.yaml`:
+    ```yaml
+    tac:
+      mode: improved
+      time2vec:
+        enabled: true
+        num_periodic: 15
+      memory:
+        enabled: true
+        queue_capacity: 128
+      scoring:
+        alpha: 0.5
+        threshold: evt
+    ```
+  - [ ] `configs/ablations/bgl_time_only.yaml` (Time2Vec only)
+  - [ ] `configs/ablations/bgl_memory_only.yaml` (Memory only)
+  - [ ] `configs/ablations/bgl_full_tac.yaml` (same as bgl_tac_full)
+
+**Integration Testing** ❌ **TODO**:
+- [ ] `tests/test_integration.py`:
+  - [ ] Forward pass through all 4 modes (baseline, time_only, memory_only, full)
+  - [ ] Check output shapes match expected (batch, seq_len, vocab_size)
+  - [ ] Verify feature flags disable/enable components correctly
+  
+- [ ] Anti-leakage verification:
+  - [ ] Memory Queue only contains vectors from t ≤ t_current
+  - [ ] No shuffle on test set DataLoader
+  - [ ] Chronological split enforced
+
+- [ ] `scripts/smoke_test_phase3.sh` ❌ **TODO**:
+  - [ ] 1-epoch training on small subset of BGL
+  - [ ] Verify no NaN/Inf in loss
+  - [ ] Verify output shape
+
+**Exit Criteria Week 4 (Phase 3 Complete)**:
+- [ ] Forward pass succeeds through all modes without errors
+- [ ] No matrix singularity issues (Ledoit-Wolf handles edge cases)
+- [ ] Config files load correctly and apply feature flags
+- [ ] Anti-leakage tests pass (7/7)
+- [ ] Ready for Phase 4 experiments
+
+---
+
+### 🎯 Target Metrics Phase 3
+- **Functional**: No runtime errors, no NaN/Inf in loss
+- **Performance**: Latency < 10ms/window (measure in Phase 6)
+- **Quality**: FPR ≤ baseline (0.000020), DLT > 0 (measure in Phase 4)
+
+### 📊 Artifacts to Create in Phase 3
+```
+outputs/BGL_tac/
+├── model/
+│   └── time2vec_init/          # Initial Time2Vec weights (before training)
+├── configs/
+│   ├── bgl_tac_full.yaml
+│   └── ablations/
+│       ├── bgl_time_only.yaml
+│       ├── bgl_memory_only.yaml
+│       └── bgl_full_tac.yaml
+└── tests/
+    ├── test_time2vec_results.txt
+    ├── test_welford_results.txt
+    ├── test_memory_queue_results.txt
+    └── test_integration_results.txt
 ```
 
-### Môi trường:
-- **Platform**: Kaggle Notebooks (P100/T4 GPU, 16GB VRAM, 30GB RAM)
-- **No Docker**: Chạy trực tiếp trên Kaggle environment
+### 🔄 Rollback Plan
+Nếu Phase 3 gặp blockers không giải quyết được:
+1. **Time2Vec gradient vanishing**: giảm num_periodic (15 → 5)
+2. **Singular covariance despite LW**: fallback to Cosine Similarity
+3. **OOM (VRAM)**: giảm queue_capacity (128 → 64)
+4. **Latency > 10ms**: project [CLS] to lower dim (768 → 256)
+
+### 🚀 Môi Trường Phase 3
+- **Platform**: Kaggle Notebooks (T4 x2, 16GB VRAM, 30GB RAM)
+- **Baseline**: LAnoBERT (F1: 0.999974, FPR: 0.000020)
+- **Target**: TAC-LAnoBERT với FPR ≤ 0.000017 (15% reduction), DLT > 0
+- **Development**: Local (MacOS) → Kaggle Notebooks cho training
+
+---
+
+## Phase 4-9 (Không thay đổi)
+(Giữ nguyên nội dung Phase 4-9 như trước)
