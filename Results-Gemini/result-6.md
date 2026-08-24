@@ -8,10 +8,10 @@ Nhằm bảo vệ tính toàn vẹn của thiết kế nghiên cứu và ngăn c
 
 | Element | From result-5.md | Technical Interpretation | Q1/Q2 / Publication Check | Changed? |
 | :---- | :---- | :---- | :---- | :---- |
-| **Baseline** | LAnoBERT (Yukyung Lee et al., 2023\) | Kiến trúc Transformer Encoder (BERT Base), Tokenizer WordPiece (parser-free), huấn luyện hàm mất mát Masked Language Modeling (MLM). | *Applied Soft Computing*, Q1 (SCImago/JCR). Xuất bản chính thức 2023\. DOI: 10.1016/j.asoc.2023.110689. | No |
+| **Baseline** | LAnoBERT (Yukyung Lee et al., 2023) | Kiến trúc Transformer Encoder (BERT Base), Tokenizer WordPiece (parser-free), huấn luyện hàm mất mát Masked Language Modeling (MLM). | *Applied Soft Computing*, Q1 (SCImago/JCR). Xuất bản chính thức 2023\. DOI: 10.1016/j.asoc.2023.110689. | No |
 | **Limitation** | Time-Delta Blindness & Contextual Myopia | Lớp Positional Encoding tĩnh loại bỏ thời gian vật lý. Giới hạn cửa sổ 512 tokens triệt tiêu khả năng quan sát trạng thái dài hạn của hệ thống. | Được xác nhận bởi các phân tích thực chứng trên hệ thống HPC và vi dịch vụ (DualBERT, FALL)4. | No |
-| **Targeted Improvement** | Time2Vec & Continual Session Memory | Bổ sung vector nhúng thời gian vào tensor đầu vào. Thiết lập hàng đợi VRAM để lưu trữ trạng thái vector \[CLS\] và tính khoảng cách Mahalanobis. | Cải tiến trực tiếp xử lý giới hạn, giữ nguyên độ phức tạp tuyến tính ![][image1] cho việc cập nhật truy xuất trực tuyến. | No |
-| **Input** | Raw Logs \+ Timestamp | Dữ liệu văn bản log thô chưa qua phân tích cú pháp, đi kèm nhãn thời gian tuyệt đối để trích xuất ![][image2]. | Luồng dữ liệu tiêu chuẩn từ các bộ dữ liệu công nghiệp. | No |
+| **Targeted Improvement** | Time2Vec & Continual Session Memory | Bổ sung vector nhúng thời gian vào tensor đầu vào. Thiết lập hàng đợi VRAM để lưu trữ trạng thái vector [CLS] và tính khoảng cách Mahalanobis. | Cải tiến trực tiếp xử lý giới hạn, giữ nguyên độ phức tạp tuyến tính ![][image1] cho việc cập nhật truy xuất trực tuyến. | No |
+| **Input** | Raw Logs + Timestamp | Dữ liệu văn bản log thô chưa qua phân tích cú pháp, đi kèm nhãn thời gian tuyệt đối để trích xuất ![][image2]. | Luồng dữ liệu tiêu chuẩn từ các bộ dữ liệu công nghiệp. | No |
 | **Output** | Hybrid Proactive Score (Alert) | Điểm số kết hợp giữa mức độ bất ngờ ngôn ngữ (MLM Loss) và sự trệch hướng quỹ đạo không gian vector (Mahalanobis Distance). | Đầu ra định lượng phục vụ trực tiếp cho thuật toán tính ngưỡng cực trị (EVT). | No |
 | **Main Evaluation** | DLT, FPR, Chronological Split | Giao thức phân tách dữ liệu theo trục thời gian vật lý để chống rò rỉ dữ liệu. Đo lường Detection Lead Time (DLT). | Giao thức bắt buộc để đánh giá năng lực dự báo sớm một cách hợp lệ về mặt thống kê. | No |
 
@@ -43,12 +43,12 @@ Quyết định cuối cùng (Decision Rule) phụ thuộc vào một ngưỡng 
 
 Hai điểm nghẽn trí tử là sự mù lòa thời gian và sự thiển cận ngữ cảnh được phẫu thuật và khắc phục thông qua hai nâng cấp kiến trúc có tính liên kết chặt chẽ4. Sự cải tiến này không nhằm thay thế bộ mã hóa ngôn ngữ, mà cung cấp cho nó một hệ quy chiếu vật lý và một tầm nhìn vĩ mô.  
 Mô-đun cải tiến thứ nhất tập trung vào lớp nhúng thời gian liên tục (Time-Delta Embedding). Đầu vào bổ sung cho hệ thống là mảng ![][image2], thể hiện khoảng cách thời gian (tính bằng mili-giây) giữa sự kiện log hiện tại và sự kiện ngay trước nó. Thành phần này có trách nhiệm chuyển đổi một giá trị vô hướng ![][image11] thành một vector nhúng thông qua cấu trúc Time2Vec14. Về mặt toán học, vector đầu ra ![][image12] được xác định bởi thành phần phi tuần hoàn ![][image13] và các thành phần tuần hoàn ![][image14] cho ![][image15]. Các tham số ![][image16] (tần số) và ![][image17] (độ lệch pha) là các trọng số có khả năng học (learnable parameters) được đồng huấn luyện cùng mạng BERT thông qua thuật toán lan truyền ngược14. Vector này được hợp nhất bằng phép chiếu tuyến tính vào tensor biểu diễn ở tầng dưới cùng của kiến trúc.  
-Mô-đun cải tiến thứ hai là Hàng đợi Bộ nhớ Phiên Liên tục (Continual Session Memory Queue). Mạng Transformer nguyên bản chỉ phân tích tối đa 512 tokens một lần. Thay vì vứt bỏ thông tin sau mỗi lượt suy luận, kiến trúc mới trích xuất vector \[CLS\] (đại diện ngữ nghĩa tổng quát của toàn bộ cửa sổ hiện tại) và nạp vào một bộ đệm cấu trúc FIFO có dung lượng không gian ![][image18]. Đầu ra của mô-đun này là khoảng cách Mahalanobis điều chuẩn đo lường sự khác biệt giữa trạng thái hiện hành và cấu trúc hiệp phương sai của ![][image18] trạng thái lịch sử.
+Mô-đun cải tiến thứ hai là Hàng đợi Bộ nhớ Phiên Liên tục (Continual Session Memory Queue). Mạng Transformer nguyên bản chỉ phân tích tối đa 512 tokens một lần. Thay vì vứt bỏ thông tin sau mỗi lượt suy luận, kiến trúc mới trích xuất vector [CLS] (đại diện ngữ nghĩa tổng quát của toàn bộ cửa sổ hiện tại) và nạp vào một bộ đệm cấu trúc FIFO có dung lượng không gian ![][image18]. Đầu ra của mô-đun này là khoảng cách Mahalanobis điều chuẩn đo lường sự khác biệt giữa trạng thái hiện hành và cấu trúc hiệp phương sai của ![][image18] trạng thái lịch sử.
 
 | Improvement Component | Input | Responsibility | Output | Baseline Relation | Hypothesis |
 | :---- | :---- | :---- | :---- | :---- | :---- |
 | **Time2Vec Extractor** | Giá trị ![][image2] (ms). | Mã hóa khoảng cách thời gian thành vector nhịp điệu. | Vector ![][image12]. | Tiêm trực tiếp vào lớp Nhúng của Baseline. | Việc nắm bắt nhịp độ vật lý giúp phân biệt tải biến động hợp lệ và bế tắc tài nguyên, giảm Tỷ lệ Dương tính Giả (FPR)4. |
-| **Session Memory Queue** | Vector \[CLS\] (768 chiều). | Lưu trữ ![][image18] trạng thái lịch sử và tính toán độ lệch quỹ đạo. | Điểm Khoảng cách Mahalanobis ![][image19]. | Bổ sung ở tầng Inference đầu ra của Baseline. | Việc đối chiếu quỹ đạo dài hạn cung cấp khả năng phát hiện sớm sự suy thoái, gia tăng Thời gian dẫn (DLT)4. |
+| **Session Memory Queue** | Vector [CLS] (768 chiều). | Lưu trữ ![][image18] trạng thái lịch sử và tính toán độ lệch quỹ đạo. | Điểm Khoảng cách Mahalanobis ![][image19]. | Bổ sung ở tầng Inference đầu ra của Baseline. | Việc đối chiếu quỹ đạo dài hạn cung cấp khả năng phát hiện sớm sự suy thoái, gia tăng Thời gian dẫn (DLT)4. |
 
 Sự kết hợp của hai mô-đun này tạo thành một định hướng cải tiến duy nhất (Main Improvement Direction) hướng tới việc giải quyết bài toán cảnh báo sớm một cách chủ động và có căn cứ toán học.
 
@@ -56,7 +56,7 @@ Sự kết hợp của hai mô-đun này tạo thành một định hướng c�
 
 Kiến trúc tổng thể của TAC-LAnoBERT là sự dung hợp chặt chẽ giữa khối cơ sở kế thừa và khối cải tiến có mục tiêu, tuân thủ tuyệt đối nguyên lý thiết kế mô-đun. Sự tách biệt rạch ròi trạng thái của các mô-đun bảo đảm rằng việc huấn luyện các trọng số mới không phá hủy trí tuệ ngôn ngữ đã được xây dựng trong mạng BERT, đồng thời giữ vững tính toàn vẹn của một công trình nghiên cứu mở rộng.  
 Cấu trúc luồng xử lý được thể hiện qua các khối chức năng tương tác trực tiếp theo chiều dọc. Tầng thu nhận dữ liệu bao gồm mô-đun "Log Input & Parser-free Tokenizer" (Trạng thái: Kế thừa), nhận luồng văn bản và thực hiện mã hóa WordPiece. Song song đó, mô-đun "Time-Delta Extractor" (Trạng thái: Mới) tính toán khoảng cách vật lý thời gian ![][image2] giữa các sự kiện. Tầng "Representation" (Trạng thái: Sửa đổi) đảm nhận nhiệm vụ dung hợp ba ma trận: Token Embeddings, Absolute Positional Embeddings và Time2Vec Embeddings thành một tensor thống nhất.  
-Tensor hợp nhất này được đưa vào "Transformer Backbone" (Trạng thái: Kế thừa), vốn thực thi thuật toán tự chú ý để nội tâm hóa cấu trúc dữ liệu log4. Tại tầng đầu ra của bộ mã hóa, luồng dữ liệu phân kỳ thành hai nhánh riêng biệt. Nhánh thứ nhất đi vào mô-đun "Reactive MLM Scorer" (Trạng thái: Kế thừa) để tính điểm bất thường cú pháp truyền thống. Nhánh thứ hai đi vào mô-đun "Memory Queue & Mahalanobis Distance" (Trạng thái: Mới) để lưu trữ vector \[CLS\] và tính toán độ lệch quỹ đạo.  
+Tensor hợp nhất này được đưa vào "Transformer Backbone" (Trạng thái: Kế thừa), vốn thực thi thuật toán tự chú ý để nội tâm hóa cấu trúc dữ liệu log4. Tại tầng đầu ra của bộ mã hóa, luồng dữ liệu phân kỳ thành hai nhánh riêng biệt. Nhánh thứ nhất đi vào mô-đun "Reactive MLM Scorer" (Trạng thái: Kế thừa) để tính điểm bất thường cú pháp truyền thống. Nhánh thứ hai đi vào mô-đun "Memory Queue & Mahalanobis Distance" (Trạng thái: Mới) để lưu trữ vector [CLS] và tính toán độ lệch quỹ đạo.  
 Cuối cùng, mô-đun "Hybrid Anomaly Detector" (Trạng thái: Mới) nhận đầu vào từ cả hai nhánh, áp dụng luật định chuẩn lai và xuất ra tín hiệu cảnh báo sớm định lượng4. Khối "Evaluation Pipeline" (Trạng thái: Đánh giá) hoạt động độc lập, theo dõi các nhãn hệ thống và tính toán các độ đo định thời lượng như DLT dựa trên thời điểm kích hoạt tín hiệu.
 
 ## **6\. Research Traceability**
@@ -66,8 +66,8 @@ Ma trận truy xuất nguồn gốc (Traceability Matrix) là cốt lõi để k
 | Research Requirement | System Component | Experiment | Metric |
 | :---- | :---- | :---- | :---- |
 | **RQ1:** Sự mù lòa thời gian gây nhiễu dương tính giả như thế nào khi cấu trúc tải thay đổi? | Cấu trúc LAnoBERT gốc (Baseline). | Phân tích Baseline dưới tải động mô phỏng (E1, E5). | Tỷ lệ FPR, Số lượng báo động giả. |
-| **RQ2:** Nhúng thời gian có kiềm chế được bão cảnh báo không? | Mô-đun Time-Delta Extractor và Time2Vec Embedding. | Nghiên cứu cắt bỏ: LAnoBERT \+ Time2Vec (E3). | Mức sụt giảm FPR trong điều kiện nhiễu so với Baseline. |
-| **RQ3:** Việc đối chiếu trạng thái quá khứ tăng thời gian dẫn ra sao? | Mô-đun Continual Session Memory Queue & Shrinkage Mahalanobis. | Nghiên cứu cắt bỏ: LAnoBERT \+ Memory (E3). | Detection Lead Time (DLT) tính bằng phút/giây. |
+| **RQ2:** Nhúng thời gian có kiềm chế được bão cảnh báo không? | Mô-đun Time-Delta Extractor và Time2Vec Embedding. | Nghiên cứu cắt bỏ: LAnoBERT + Time2Vec (E3). | Mức sụt giảm FPR trong điều kiện nhiễu so với Baseline. |
+| **RQ3:** Việc đối chiếu trạng thái quá khứ tăng thời gian dẫn ra sao? | Mô-đun Continual Session Memory Queue & Shrinkage Mahalanobis. | Nghiên cứu cắt bỏ: LAnoBERT + Memory (E3). | Detection Lead Time (DLT) tính bằng phút/giây. |
 | **H1:** Time2Vec giảm đáng kể FPR trước tải biến động. | Time2Vec Layer tích hợp đầu vào. | Đánh giá đối kháng toàn diện (E2, E3, E5). | PR-AUC, độ lệch FPR, Cohen's ![][image20] cho ý nghĩa hiệu ứng. |
 | **H2:** Memory Queue kéo dài khoảng đệm thời gian cảnh báo. | Khối tính toán Khoảng cách Mahalanobis trực tuyến. | Đánh giá đối kháng toàn diện (E2, E3). | Sự khác biệt DLT với mức ý nghĩa thống kê (Wilcoxon Test). |
 | **H3:** Chi phí tính toán trực tuyến không vượt quá ngưỡng thực tiễn. | Thuật toán cập nhật hiệp phương sai trực tuyến (Welford). | Hồ sơ hiệu suất phần cứng (E6). | Độ trễ suy luận (ms), Mức tiêu hao VRAM hệ thống. |
@@ -76,7 +76,7 @@ Ma trận truy xuất nguồn gốc (Traceability Matrix) là cốt lõi để k
 
 Đặc tả luồng dữ liệu phân biệt rõ rệt giữa ba quá trình: tiền tính toán ngoại tuyến (offline pre-computation), suy luận trực tuyến mô phỏng (simulated online inference) và quá trình xử lý chỉ dành cho đánh giá (evaluation-only processing). Sự phân chia này bảo vệ hệ thống khỏi các nút thắt cổ chai không cần thiết trong luồng sản xuất.  
 Trong pha suy luận trực tuyến, dữ liệu log thô liên tục chảy vào bộ đệm của hệ thống. Bộ Tokenizer lập tức băm chuỗi văn bản thành mảng các Token IDs. Cùng lúc, nhãn thời gian tuyệt đối của dòng log hiện tại được đối chiếu với nhãn thời gian của dòng log ngay trước đó trong cùng phiên để trích xuất đại lượng ![][image2]. Mảng ![][image2] trải qua phép biến đổi logarit để ổn định sự chênh lệch lớn giữa các khoảng thời gian trước khi truyền vào mạng Time2Vec4. Khi bộ đệm đạt đủ giới hạn 512 tokens, cửa sổ dữ liệu được chốt (windowing). Tầng nhúng hợp nhất các vector Token, Position và Time2Vec. Mạng BERT nhận tensor ba chiều này và thực hiện các phép nhân ma trận cường độ cao qua 12 lớp tự chú ý.  
-Dữ liệu đầu ra của BERT phân kỳ: nhánh MLM tính toán sai số chéo cho các token bị che khuất để tạo ra điểm ![][image21]. Nhánh bộ nhớ tách riêng vector của token đầu tiên \[CLS\]. Vector này được đẩy vào cấu trúc hàng đợi VRAM. Thuật toán cập nhật trực tuyến đọc vector vừa đến và vector bị đẩy ra khỏi hàng đợi để cập nhật giá trị trung bình và ma trận hiệp phương sai4. Hàm Mahalanobis sử dụng các tham số mới nhất này để tính điểm lệch chuẩn không gian ![][image19]. Khối ra quyết định kết hợp hai điểm số này thành điểm rủi ro cuối cùng.  
+Dữ liệu đầu ra của BERT phân kỳ: nhánh MLM tính toán sai số chéo cho các token bị che khuất để tạo ra điểm ![][image21]. Nhánh bộ nhớ tách riêng vector của token đầu tiên [CLS]. Vector này được đẩy vào cấu trúc hàng đợi VRAM. Thuật toán cập nhật trực tuyến đọc vector vừa đến và vector bị đẩy ra khỏi hàng đợi để cập nhật giá trị trung bình và ma trận hiệp phương sai4. Hàm Mahalanobis sử dụng các tham số mới nhất này để tính điểm lệch chuẩn không gian ![][image19]. Khối ra quyết định kết hợp hai điểm số này thành điểm rủi ro cuối cùng.  
 Ở pha xử lý chỉ dành cho đánh giá (offline), mô-đun hậu kiểm theo dõi thời điểm kích hoạt của điểm rủi ro vượt ngưỡng và đối chiếu nó với các nhãn sự cố trong tương lai đã được ẩn đi để xác định Thời gian dẫn (Lead Time) một cách trung thực4.
 
 ## **8\. Temporal Data Design**
@@ -97,7 +97,7 @@ Quá trình chia tách dữ liệu bắt buộc tuân theo giao thức Phân tá
 ## **9\. Knowledge / Retrieval**
 
 Kiến trúc này giới hạn không gian tri thức trong phạm vi Truy hồi Phiên Cục bộ (Local Session Retrieval), từ chối sử dụng các cấu trúc Đồ thức Tri thức (Knowledge Graphs) hoặc Truy hồi Dữ liệu Mật độ Cao (Dense Passage Retrieval / RAG) từ các hệ thống LLM khổng lồ8. Nguyên nhân là do các phương pháp này thường tạo ra độ trễ I/O lớn, không thể kiểm soát khi đối mặt với luồng dữ liệu biến thiên lên tới hàng nghìn sự kiện mỗi giây.  
-Đối tượng truy vấn (Query) là trạng thái vector hiện hành ![][image37] (vector \[CLS\] với số chiều ![][image5]). Hồ sơ ứng viên (Candidate Pool) là tập hợp ![][image18] vector trạng thái trong quá khứ ![][image38] hiện đang lưu trú trong Hàng đợi Bộ nhớ. Khoảng thời gian lọc (Temporal Filtering) được ngầm định bởi chính nguyên tắc Vào trước \- Ra trước (FIFO) của hàng đợi, liên tục làm mới bằng cách loại bỏ các trạng thái đã quá cũ.  
+Đối tượng truy vấn (Query) là trạng thái vector hiện hành ![][image37] (vector [CLS] với số chiều ![][image5]). Hồ sơ ứng viên (Candidate Pool) là tập hợp ![][image18] vector trạng thái trong quá khứ ![][image38] hiện đang lưu trú trong Hàng đợi Bộ nhớ. Khoảng thời gian lọc (Temporal Filtering) được ngầm định bởi chính nguyên tắc Vào trước - Ra trước (FIFO) của hàng đợi, liên tục làm mới bằng cách loại bỏ các trạng thái đã quá cũ.  
 Mục tiêu Truy hồi (Retrieval Objective) không phải là tìm kiếm láng giềng gần nhất, mà là ước lượng mức độ xa lạ của trạng thái hiện tại đối với phân phối chuẩn của các trạng thái quá khứ. Do đó, logic đánh giá xếp hạng (Ranking) dựa trên Khoảng cách Mahalanobis: ![][image39], trong đó ![][image40] là vector trung bình và ![][image41] là ma trận hiệp phương sai của ![][image42].  
 Thách thức kỹ thuật lớn nhất nảy sinh khi kích thước ngữ cảnh ![][image18] (ví dụ: 100 cửa sổ) nhỏ hơn số chiều ![][image5], khiến ma trận ![][image41] trở nên kỳ dị (singular) và không thể nghịch đảo. Thiết kế giải quyết rủi ro này bằng thuật toán Ledoit-Wolf Covariance Shrinkage4. Thuật toán này điều hòa ![][image41] bằng cách co ngót nó về phía một ma trận mục tiêu ![][image43], ![][image44], với ![][image45] là hệ số co ngót tối ưu. Cải tiến này đảm bảo ![][image46] luôn tồn tại và tạo ra một thước đo cảnh báo vô cùng sắc bén mà không yêu cầu tìm kiếm tuyến tính tốn kém qua cơ sở dữ liệu4.
 
@@ -105,7 +105,7 @@ Thách thức kỹ thuật lớn nhất nảy sinh khi kích thước ngữ cả
 
 Quá trình xây dựng ngữ cảnh xoay quanh việc quản lý và trích xuất thông tin một cách có hệ thống từ luồng sự kiện tốc độ cao, đồng thời bảo vệ giới hạn tài nguyên của mạng tự chú ý.  
 Ngữ cảnh hiện tại (Current Context) bị giới hạn bởi tham số cắt cụt (truncation) tĩnh 512 tokens. Điều này ngăn chặn hiện tượng tràn bộ nhớ trong kiến trúc Transformer. Tuy nhiên, Ngữ cảnh truy hồi (Retrieved Context) không phải là sự nối ghép các đoạn văn bản nguyên thủy, mà là sự tổng hợp toán học cấu trúc phân phối của các cửa sổ trước đó. Do tính chất của việc thiết kế hàng đợi, việc sắp xếp (ordering) tuân thủ nghiêm ngặt nguyên tắc FIFO, tạo ra một cửa sổ trượt vĩ mô trên các trạng thái vector.  
-Bất kỳ một chuỗi văn bản nào chứa nhiều hơn 512 tokens sẽ bị cắt cụt ở phần đuôi. Kích thước ngữ cảnh (Context Limit) của mô-đun bộ nhớ được định hình qua tham số ![][image18], quyết định độ sâu của lịch sử mà hệ thống muốn xem xét để phát hiện quỹ đạo thoái hóa. Sự ưu tiên (Prioritization) mang tính bình đẳng cho tất cả các trạng thái trong hàng đợi, khi mà mọi vector \[CLS\] đều đóng góp trọng số tương đương vào cấu trúc hiệp phương sai ![][image41]. Sự kiểm soát độ nhiễu (Noise Control) được bảo đảm bởi tính ổn định tự nhiên của trung bình cộng và phương sai trong thuật toán tính khoảng cách. Tính hợp lệ thời gian (Temporal Validity) của ngữ cảnh truy hồi luôn được duy trì ở mức cao nhất, do hàng đợi chỉ chứa đựng các trạng thái đã thực sự xảy ra trong dòng thời gian vật lý.
+Bất kỳ một chuỗi văn bản nào chứa nhiều hơn 512 tokens sẽ bị cắt cụt ở phần đuôi. Kích thước ngữ cảnh (Context Limit) của mô-đun bộ nhớ được định hình qua tham số ![][image18], quyết định độ sâu của lịch sử mà hệ thống muốn xem xét để phát hiện quỹ đạo thoái hóa. Sự ưu tiên (Prioritization) mang tính bình đẳng cho tất cả các trạng thái trong hàng đợi, khi mà mọi vector [CLS] đều đóng góp trọng số tương đương vào cấu trúc hiệp phương sai ![][image41]. Sự kiểm soát độ nhiễu (Noise Control) được bảo đảm bởi tính ổn định tự nhiên của trung bình cộng và phương sai trong thuật toán tính khoảng cách. Tính hợp lệ thời gian (Temporal Validity) của ngữ cảnh truy hồi luôn được duy trì ở mức cao nhất, do hàng đợi chỉ chứa đựng các trạng thái đã thực sự xảy ra trong dòng thời gian vật lý.
 
 ## **11\. Foundation Model / Training**
 
@@ -122,8 +122,8 @@ Tiến trình suy luận trực tuyến bao trùm vòng đời của log từ kh
 > 3. **Windowing (Online):** Tổng hợp các tokens và mảng ![][image2] cho đến khi đầy kích thước 512, tạo tensor đầu vào chuẩn mực.  
 > 4. **Representation (Online):** Chiếu mảng ![][image2] qua mạng Time2Vec và cộng tuyến tính với Token Embeddings, Positional Embeddings.  
 > 5. **Model Forward Pass (Online, Compute-intensive):** Thực thi suy luận qua 12 lớp BERT. Đây là bước nặng về tính toán nhất nhưng đã được tối ưu cực hạn nhờ khả năng xử lý song song của GPU.  
-> 6. **Improvement \- Memory Update (Online):** Trích xuất vector \[CLS\]. Cập nhật thuật toán Welford để tính lại trung bình và ma trận hiệp phương sai trực tuyến với độ phức tạp ![][image1] thay vì ![][image49]4. Đẩy vector \[CLS\] vào hàng đợi FIFO.  
-> 7. **Improvement \- Retrieval/Context (Online, Latency-sensitive):** Thực hiện phép tính Ledoit-Wolf Shrinkage trên ma trận hiệp phương sai và nghịch đảo thông qua phân tích Cholesky để tính Khoảng cách Mahalanobis ![][image19].  
+> 6. **Improvement - Memory Update (Online):** Trích xuất vector [CLS]. Cập nhật thuật toán Welford để tính lại trung bình và ma trận hiệp phương sai trực tuyến với độ phức tạp ![][image1] thay vì ![][image49]4. Đẩy vector [CLS] vào hàng đợi FIFO.  
+> 7. **Improvement - Retrieval/Context (Online, Latency-sensitive):** Thực hiện phép tính Ledoit-Wolf Shrinkage trên ma trận hiệp phương sai và nghịch đảo thông qua phân tích Cholesky để tính Khoảng cách Mahalanobis ![][image19].  
 > 8. **Anomaly Score (Online):** Tính trung bình cộng hàm mất mát MLM tạo ![][image21] từ các đầu ra token ẩn.  
 > 9. **Early Detection (Online):** Kết hợp hai điểm số ![][image19] và ![][image21] tạo thành Hybrid Proactive Score.  
 > 10. **Output/Alert (Online):** So sánh điểm số lai với ngưỡng động tự hiệu chỉnh. Phát tín hiệu cảnh báo DLT nếu vi phạm quỹ đạo an toàn4.
@@ -134,7 +134,7 @@ Việc sử dụng thuật toán Welford để cập nhật trực tuyến bảo
 
 Giao diện đánh giá bất thường xác định cách thức diễn dịch điểm số và định hình luật quyết định để phân biệt rõ ràng giữa phân loại phản ứng và cảnh báo dự báo.  
 **Anomaly Score:** Hệ thống sinh ra hai nguồn điểm số độc lập có bản chất toán học khác nhau. Điểm ![][image50] phản ánh mức độ bất ngờ ngôn ngữ (đo bằng giá trị cross-entropy cục bộ). Điểm ![][image51] phản ánh độ dị thường quỹ đạo (đo bằng khoảng cách không gian Mahalanobis so với các cửa sổ trước). Điểm số lai là một phép chiếu tổng hợp có trọng số: ![][image52], với ![][image53] (thường là 0.5) kiểm soát sự ưu tiên cân bằng giữa lỗi cú pháp hay lỗi lệch quỹ đạo.  
-**Decision Rule:** Luồng phân phối điểm số của mạng học sâu thường không tuân theo các phân phối Gauss đơn giản và liên tục trôi dạt (drift) theo thời gian. Việc sử dụng một ngưỡng tĩnh (fixed threshold) là không khả thi và gây ra thiên lệch. Giao diện áp dụng Thuyết Giá trị Cực trị (Extreme Value Theory \- EVT), cụ thể là mô hình Peaks-Over-Threshold (POT), để tự động hóa việc tính toán ngưỡng động (Adaptive Threshold) dựa trên phần đuôi của phân phối điểm số trong tập dữ liệu chuẩn hóa, mà không đưa ra các giả định về dạng phân phối chung4.  
+**Decision Rule:** Luồng phân phối điểm số của mạng học sâu thường không tuân theo các phân phối Gauss đơn giản và liên tục trôi dạt (drift) theo thời gian. Việc sử dụng một ngưỡng tĩnh (fixed threshold) là không khả thi và gây ra thiên lệch. Giao diện áp dụng Thuyết Giá trị Cực trị (Extreme Value Theory - EVT), cụ thể là mô hình Peaks-Over-Threshold (POT), để tự động hóa việc tính toán ngưỡng động (Adaptive Threshold) dựa trên phần đuôi của phân phối điểm số trong tập dữ liệu chuẩn hóa, mà không đưa ra các giả định về dạng phân phối chung4.  
 **Early Detection:** Khái niệm "Sớm" (Early) không ám chỉ việc thuật toán xử lý nhanh hơn vài mili-giây, mà là năng lực nhận diện sự suy thoái trước khi thông báo hệ thống sụp đổ (FATAL) đầu tiên xuất hiện trong tệp log. Detection Lead Time (DLT) được tính bằng ![][image54]. Điểm ![][image55] được thiết kế riêng để kích hoạt sớm nhờ năng lực đối chiếu quỹ đạo dài hạn4.
 
 ## **14\. Configuration**
@@ -143,21 +143,21 @@ Toàn bộ siêu tham số của hệ thống được quản lý thông qua cá
 
 | Configuration File | Parameter Name | Type | Default | Valid Range | Purpose |
 | :---- | :---- | :---- | :---- | :---- | :---- |
-| dataset.yaml | sequence\_length | int | 512 | ![][image56] | Chiều dài tối đa của cửa sổ ngữ cảnh Transformer. |
-| dataset.yaml | masking\_ratio | float | 0.2 | ![][image57] | Tỷ lệ che khuất ngẫu nhiên trong huấn luyện tự giám sát (MLM). |
-| baseline.yaml | hidden\_size | int | 768 | Cố định | Kích thước biểu diễn vector nội tại của kiến trúc BERT Base. |
-| improvement.yaml | t2v\_dim | int | 64 | ![][image58] | Số chiều của vector Nhúng Thời gian Động (Time2Vec)14. |
-| improvement.yaml | memory\_queue\_size (![][image18]) | int | 100 | ![][image59] | Số lượng trạng thái lịch sử vector \[CLS\] duy trì trong VRAM. |
-| improvement.yaml | alpha\_weight | float | 0.5 | ![][image60] | Trọng số điều hòa lai giữa MLM Loss và Khoảng cách Mahalanobis. |
-| model.yaml | learning\_rate | float | ![][image48] | ![][image61] | Tốc độ học khởi tạo cho thuật toán tối ưu hóa AdamW. |
-| evaluation.yaml | evt\_risk\_level (![][image62]) | float | 0.01 | ![][image63] | Mức rủi ro cực trị (Quantile) để xác định ngưỡng động POT4. |
+| dataset.yaml | sequence_length | int | 512 | ![][image56] | Chiều dài tối đa của cửa sổ ngữ cảnh Transformer. |
+| dataset.yaml | masking_ratio | float | 0.2 | ![][image57] | Tỷ lệ che khuất ngẫu nhiên trong huấn luyện tự giám sát (MLM). |
+| baseline.yaml | hidden_size | int | 768 | Cố định | Kích thước biểu diễn vector nội tại của kiến trúc BERT Base. |
+| improvement.yaml | t2v_dim | int | 64 | ![][image58] | Số chiều của vector Nhúng Thời gian Động (Time2Vec)14. |
+| improvement.yaml | memory_queue_size (![][image18]) | int | 100 | ![][image59] | Số lượng trạng thái lịch sử vector [CLS] duy trì trong VRAM. |
+| improvement.yaml | alpha_weight | float | 0.5 | ![][image60] | Trọng số điều hòa lai giữa MLM Loss và Khoảng cách Mahalanobis. |
+| model.yaml | learning_rate | float | ![][image48] | ![][image61] | Tốc độ học khởi tạo cho thuật toán tối ưu hóa AdamW. |
+| evaluation.yaml | evt_risk_level (![][image62]) | float | 0.01 | ![][image63] | Mức rủi ro cực trị (Quantile) để xác định ngưỡng động POT4. |
 
 Mọi thay đổi trên các dải thông số đều có lý luận khoa học đằng sau và đóng vai trò cấu thành nên các khảo sát độ nhạy (sensitivity analysis) trong giai đoạn hậu kiểm.
 
 ## **15\. Experiment Management**
 
 Nghiên cứu đòi hỏi sự kiểm soát nghiêm ngặt về quản lý vòng đời mô hình để hỗ trợ tính tái lập giữa các nhóm nghiên cứu độc lập. Do quy mô là một nguyên mẫu nghiên cứu, một hệ thống quản lý siêu dữ liệu tối giản nhưng triệt để được triển khai thay cho các giải pháp MLflow hay W\&B cồng kềnh.  
-Mỗi lượt chạy thuật toán sinh ra một Run ID duy nhất đi kèm dấu thời gian. Một hạt giống ngẫu nhiên (Seed \= 42\) được ghim chặt trên toàn bộ các nền tảng tính toán khoa học, từ thư viện NumPy, PyTorch torch.manual\_seed(), cho đến hệ thống tăng tốc phần cứng CUDA torch.cuda.manual\_seed\_all(). Phiên bản Dataset được khóa theo các bản phân tách chuẩn của BGL và Thunderbird để tránh sai lệch dữ liệu thử nghiệm. Phiên bản Baseline/Improvement lưu giữ mã băm Git (Git hash) của bộ mã nguồn thực thi.  
+Mỗi lượt chạy thuật toán sinh ra một Run ID duy nhất đi kèm dấu thời gian. Một hạt giống ngẫu nhiên (Seed = 42) được ghim chặt trên toàn bộ các nền tảng tính toán khoa học, từ thư viện NumPy, PyTorch torch.manual_seed(), cho đến hệ thống tăng tốc phần cứng CUDA torch.cuda.manual_seed_all(). Phiên bản Dataset được khóa theo các bản phân tách chuẩn của BGL và Thunderbird để tránh sai lệch dữ liệu thử nghiệm. Phiên bản Baseline/Improvement lưu giữ mã băm Git (Git hash) của bộ mã nguồn thực thi.  
 Toàn bộ các hiện vật (Artifacts) bao gồm checkpoints của trọng số sau mỗi kỷ nguyên (Epoch), tệp YAML cấu hình trạng thái, và các mảng numpy chứa raw scores (![][image21], ![][image19]) được kết xuất định kỳ xuống đĩa cứng. Các thông số đo lường không chỉ bao gồm quy trình hội tụ của hàm mất mát mà còn lưu vết liên tục tài nguyên phần cứng (như GPU Memory Allocation và Inference Latency per Batch) thông qua các công cụ đo kiểm (profiler).
 
 ## **16\. Controlled Comparison**
@@ -172,8 +172,8 @@ Nền tảng của kiểm định nhân quả khoa học nằm ở việc thực
 | **Hardware Environment** | NVIDIA RTX 4090 | NVIDIA RTX 4090 | Yes (Cùng phần cứng) |
 | **Evaluation Metrics** | F1, FPR, DLT | F1, FPR, DLT | Yes (Cùng hệ quy chiếu đo lường) |
 | **Random Seed** | 42 | 42 | Yes (Đảm bảo tính tất định) |
-| **Input Feature** | Token \+ Positional | Token \+ Pos \+ **Time2Vec** | **No (Main Improvement 1\)** |
-| **Anomaly Logic** | MLM Loss Only | MLM \+ **Session Memory** | **No (Main Improvement 2\)** |
+| **Input Feature** | Token + Positional | Token + Pos + **Time2Vec** | **No (Main Improvement 1)** |
+| **Anomaly Logic** | MLM Loss Only | MLM + **Session Memory** | **No (Main Improvement 2)** |
 
 Bằng việc chốt chặt mọi biến số từ cách mã hóa dữ liệu đến cấu trúc backbone nơ-ron, sự chênh lệch trong các hệ số đo lường hiệu năng chắc chắn xuất phát từ giá trị thực tiễn của Time2Vec và Hàng đợi Bộ nhớ, triệt tiêu mọi khả năng xảy ra của biến ngoại lai.
 
@@ -182,8 +182,8 @@ Bằng việc chốt chặt mọi biến số từ cách mã hóa dữ liệu đ
 Phân tích Cắt bỏ (Ablation Study) mổ xẻ và đánh giá mức độ đóng góp độc lập của từng thành phần kỹ thuật vào kiến trúc lai hoàn chỉnh. Thực nghiệm được thiết kế qua 4 biến thể nhằm quy kết nhân quả rõ ràng4:
 
 > 1. **Baseline (LAnoBERT gốc):** Lược bỏ toàn bộ mô-đun thời gian và bộ nhớ. Hệ thống đóng vai trò thiết lập đường cơ sở, khảo sát điểm yếu cốt lõi trước các biến động tải lượng.  
-> 2. **LAnoBERT \+ Time2Vec:** Tắt mô-đun Hàng đợi Bộ nhớ Phiên. Mục tiêu là quy kết tính nhân quả cho việc giảm sút Tỷ lệ Dương tính Giả (FPR) khi mạng có thể hiểu được sự dồn nén hợp lệ của tốc độ sinh log thông qua các vector thời gian vật lý.  
-> 3. **LAnoBERT \+ Session Memory:** Tắt mô-đun Time2Vec. Mục tiêu là định lượng mức tăng tuyệt đối của chỉ số Thời gian dẫn (DLT) khi mô hình được trao quyền đánh giá độ lệch quỹ đạo dài hạn (Shrinkage Mahalanobis Distance) mà không bị giới hạn bởi 512 tokens.  
+> 2. **LAnoBERT + Time2Vec:** Tắt mô-đun Hàng đợi Bộ nhớ Phiên. Mục tiêu là quy kết tính nhân quả cho việc giảm sút Tỷ lệ Dương tính Giả (FPR) khi mạng có thể hiểu được sự dồn nén hợp lệ của tốc độ sinh log thông qua các vector thời gian vật lý.  
+> 3. **LAnoBERT + Session Memory:** Tắt mô-đun Time2Vec. Mục tiêu là định lượng mức tăng tuyệt đối của chỉ số Thời gian dẫn (DLT) khi mô hình được trao quyền đánh giá độ lệch quỹ đạo dài hạn (Shrinkage Mahalanobis Distance) mà không bị giới hạn bởi 512 tokens.  
 > 4. **TAC-LAnoBERT (Full Improvement):** Kiến trúc tổng thể, chứng minh sự tương hỗ giữa việc giảm rác cảnh báo (FPR) và tăng tính tiên lượng (DLT) không gây xung đột với nhau.
 
 Sự phân mảnh này cung cấp bằng chứng định lượng chứng minh sự cần thiết không thể chối cãi của từng nâng cấp đối với mục tiêu tổng quát của hệ thống cảnh báo sớm.
@@ -192,7 +192,7 @@ Sự phân mảnh này cung cấp bằng chứng định lượng chứng minh s
 
 Cơ sở hạ tầng đánh giá chuyển dịch hoàn toàn từ việc chỉ coi trọng các số liệu thống kê tĩnh sang việc phân tích giá trị vận hành thực tế đối với hệ thống phần mềm4. Việc chỉ sử dụng F1-score để đánh giá hệ thống cảnh báo là một sự lừa dối thống kê, do đó cần thiết lập một bộ thước đo toàn diện hơn.  
 Đối với đánh giá Bất thường Cục bộ (Detection), Precision, Recall và F1-score tiếp tục được ghi nhận để đảm bảo khả năng phân loại không bị suy giảm. Đặc biệt, PR-AUC (Precision-Recall Area Under Curve) được đề cao do tính chất mất cân bằng cực đoan của bộ dữ liệu viễn trắc (Tỷ lệ lỗi thường nhỏ hơn ![][image64]).  
-Đối với cảnh báo sớm (Early Detection), hệ thống triển khai đo lường Thời gian dẫn phát hiện (Detection Lead Time \- DLT) tính bằng phút. Chỉ số Tỷ lệ Cảnh báo Sớm (Early Warning Rate \- EWR) đánh giá phần trăm số lượng sự cố FATAL được hệ thống dự báo trước một khoảng đệm thời gian hữu ích (ví dụ ![][image65] phút). Quan trọng nhất, Tỷ lệ Cảnh báo Giả (False Positive Rate \- FPR) được đo lường dưới dạng đồ thị phân phối theo thời gian để đánh giá khả năng ức chế bão cảnh báo (alert fatigue) trong các pha biến động tải (workload spikes)12.  
+Đối với cảnh báo sớm (Early Detection), hệ thống triển khai đo lường Thời gian dẫn phát hiện (Detection Lead Time - DLT) tính bằng phút. Chỉ số Tỷ lệ Cảnh báo Sớm (Early Warning Rate - EWR) đánh giá phần trăm số lượng sự cố FATAL được hệ thống dự báo trước một khoảng đệm thời gian hữu ích (ví dụ ![][image65] phút). Quan trọng nhất, Tỷ lệ Cảnh báo Giả (False Positive Rate - FPR) được đo lường dưới dạng đồ thị phân phối theo thời gian để đánh giá khả năng ức chế bão cảnh báo (alert fatigue) trong các pha biến động tải (workload spikes)12.  
 Về Hiệu năng (Efficiency), độ trễ suy luận (Inference Latency) cho mỗi cửa sổ được đo lường bằng mili-giây (ms), giới hạn tối đa kỳ vọng là ![][image66]ms để thỏa mãn luồng xử lý Streaming. Bộ định tuyến phần cứng (Hardware profiler) giám sát Memory Overhead phát sinh từ việc duy trì Hàng đợi Trạng thái Vector trong VRAM. Khả năng Tổng quát hóa (Generalization) được phân tích chéo thông qua việc chạy thử thuật toán trên dữ liệu đa hệ thống (từ BGL sang Thunderbird).
 
 ## **19\. Statistical / Reproducibility**
@@ -214,7 +214,7 @@ Các Yêu cầu Phi chức năng (NFRs) phản ánh các chuẩn mực khắt kh
 * **Latency (Độ trễ):** Quá trình cập nhật Hàng đợi Bộ nhớ và tính nghịch đảo ma trận Mahalanobis thông qua Shrinkage không được vượt quá quỹ thời gian phân tích của một cửa sổ log tiêu chuẩn. Việc sử dụng thuật toán Welford trực tuyến đảm bảo thỏa mãn NFR này bằng cách kéo giảm độ trễ xuống ngưỡng ![][image66]ms4.  
 * **Maintainability & Reproducibility (Khả năng bảo trì và Tái lập):** Kiến trúc mã nguồn được thiết kế dạng plug-and-play. Phải cô lập hoàn toàn hàm thực thi của Baseline và mô-đun Cải tiến tại các bước Forward Pass, cho phép kỹ sư dễ dàng bật/tắt để kiểm thử.  
 * **Explainability (Khả năng giải thích):** Mặc dù bộ mã hóa BERT có tính chất hộp đen, việc tách rời điểm ![][image21] (bất thường cú pháp) và ![][image19] (lệch chuẩn quỹ đạo) cho phép kỹ sư SRE biết rõ nguồn gốc cảnh báo rủi ro đến từ việc xuất hiện từ vựng mới hay hệ thống đang từ từ rơi vào bế tắc tài nguyên dài hạn11.  
-* **Cost / Compute (Chi phí vận hành):** Hàng đợi Bộ nhớ chỉ lưu trữ vector \[CLS\] 768 chiều thay vì toàn bộ ma trận ẩn của 512 tokens. Nhờ vậy, Memory Overhead (chi phí RAM/VRAM phụ trội) được kiểm soát nghiêm ngặt ở mức tối thiểu.
+* **Cost / Compute (Chi phí vận hành):** Hàng đợi Bộ nhớ chỉ lưu trữ vector [CLS] 768 chiều thay vì toàn bộ ma trận ẩn của 512 tokens. Nhờ vậy, Memory Overhead (chi phí RAM/VRAM phụ trội) được kiểm soát nghiêm ngặt ở mức tối thiểu.
 
 ## **22\. Technical Risks**
 
@@ -223,7 +223,7 @@ Báo cáo vạch ra một ma trận quản trị rủi ro kỹ thuật nhằm đ
 | Risk | Probability | Impact | Mitigation | Fallback |
 | :---- | :---- | :---- | :---- | :---- |
 | **Data Leakage (Rò rỉ dữ liệu tương lai):** Thuật toán chia dữ liệu vô tình mang thông tin tương lai vào mô hình. | Cao | Chí mạng | Ép buộc sử dụng DataLoader theo giao thức Chronological Split, cấm sử dụng hàm ngẫu nhiên hóa thời gian như k-fold4. | Giảm scope tập dữ liệu; loại bỏ các lô dữ liệu nghi ngờ vi phạm trục thời gian. |
-| **Covariance Singularity (Ma trận kỳ dị):** Cửa sổ lưu trữ ![][image18] quá nhỏ so với số chiều ![][image5], khiến ma trận lịch sử không thể nghịch đảo để tính Mahalanobis4. | Cao | Gây sập hệ thống | Áp dụng bắt buộc thuật toán Ledoit-Wolf Covariance Shrinkage để điều hòa định thức ma trận trực tuyến4. | Giảm số chiều của vector \[CLS\] bằng một lớp chiếu tuyến tính (Linear Projection) xuống không gian hẹp hơn. |
+| **Covariance Singularity (Ma trận kỳ dị):** Cửa sổ lưu trữ ![][image18] quá nhỏ so với số chiều ![][image5], khiến ma trận lịch sử không thể nghịch đảo để tính Mahalanobis4. | Cao | Gây sập hệ thống | Áp dụng bắt buộc thuật toán Ledoit-Wolf Covariance Shrinkage để điều hòa định thức ma trận trực tuyến4. | Giảm số chiều của vector [CLS] bằng một lớp chiếu tuyến tính (Linear Projection) xuống không gian hẹp hơn. |
 | **Temporal Interference (Nhiễu thời gian):** Lớp nhúng Time2Vec phá hỏng trí tuệ biểu diễn từ vựng sẵn có của BERT. | Trung bình | Đáng kể | Tiêm ma trận thời gian thông qua cơ chế chiếu song song hoặc kết hợp Attention định tuyến (gating) để bảo vệ luồng ngữ nghĩa. | Điều chỉnh giảm trọng số học của lớp nhúng thời gian trong cấu hình. |
 | **Latency Overhead:** Việc duy trì hàng đợi và tính toán ma trận làm chậm luồng suy luận Streaming. | Thấp | Vừa | Áp dụng thuật toán Welford để cập nhật trung bình và hiệp phương sai với độ phức tạp ![][image1] thay vì ![][image49]4. | Chuyển đổi đo lường sang các khoảng cách đơn giản hơn như Cosine Similarity (chấp nhận giảm độ nhạy DLT). |
 
@@ -231,16 +231,16 @@ Báo cáo vạch ra một ma trận quản trị rủi ro kỹ thuật nhằm đ
 
 Đảm bảo bất kỳ một nhà nghiên cứu độc lập nào cũng có thể cấu hình và tái hiện chính xác kết quả so sánh Baseline vs Improved là tối hậu thư của hệ thống.  
 Tài nguyên lưu trữ (Artifact storage) bao quát mọi khía cạnh: Tệp tham chiếu của BGL và Thunderbird đi kèm với bộ mã script tạo mảng phân tách (split index scripts) để cố định các khung thời gian huấn luyện. Cấu hình tiền xử lý, tệp YAML thiết lập mô hình, và số phiên bản (versions) của các trình nạp thư viện (requirements.txt) được quản lý phiên bản qua hệ thống Git.  
-Bộ trọng số mô hình ban đầu được nạp về từ nền tảng HuggingFace (yukyung/LAnoBERT)6. Toàn bộ nhật ký thí nghiệm, metadata, các mảng numpy chứa chỉ số DLT tính toán thô, và mã vẽ biểu thị (plotting scripts) bằng thư viện Matplotlib/Seaborn được bảo lưu vĩnh viễn trong kho lưu trữ dữ liệu cục bộ. Kiến trúc mã nguồn được thiết kế dưới dạng thư viện Python phân rã, bảo đảm chỉ một lệnh chạy duy nhất (ví dụ: python run\_experiment.py \--config config/full\_improvement.yaml) có thể kích hoạt toàn bộ quy trình từ tải dữ liệu đến xuất đồ thị mà không cần can thiệp thủ công.
+Bộ trọng số mô hình ban đầu được nạp về từ nền tảng HuggingFace (yukyung/LAnoBERT)6. Toàn bộ nhật ký thí nghiệm, metadata, các mảng numpy chứa chỉ số DLT tính toán thô, và mã vẽ biểu thị (plotting scripts) bằng thư viện Matplotlib/Seaborn được bảo lưu vĩnh viễn trong kho lưu trữ dữ liệu cục bộ. Kiến trúc mã nguồn được thiết kế dưới dạng thư viện Python phân rã, bảo đảm chỉ một lệnh chạy duy nhất (ví dụ: python run_experiment.py --config config/full_improvement.yaml) có thể kích hoạt toàn bộ quy trình từ tải dữ liệu đến xuất đồ thị mà không cần can thiệp thủ công.
 
 ## **24\. Research Execution Roadmap**
 
 Tiến trình thực thi nghiên cứu được hệ thống hóa thành 7 giai đoạn chạy nước rút (Sprints) nối tiếp nhau, kéo dài trong khoảng 6 đến 9 tháng để đảm bảo khối lượng công việc phù hợp với chuẩn mực luận văn Thạc sĩ4.
 
-* **Sprint 1 — Environment \+ Baseline:** Thiết lập phần cứng, cài đặt Dependencies (PyTorch, Transformers). Tải dữ liệu siêu máy tính BGL/Thunderbird và viết kịch bản Chronological Split. Chạy thử Baseline LAnoBERT nguyên bản.  
+* **Sprint 1 — Environment + Baseline:** Thiết lập phần cứng, cài đặt Dependencies (PyTorch, Transformers). Tải dữ liệu siêu máy tính BGL/Thunderbird và viết kịch bản Chronological Split. Chạy thử Baseline LAnoBERT nguyên bản.  
 * **Sprint 2 — Baseline Validation:** Thu thập bộ chỉ số độ đo ban đầu (Precision, Recall, F1). Viết script mô phỏng biến động tải hệ thống (workload spikes) để khảo sát hiện tượng tăng vọt Tỷ lệ Dương tính Giả (FPR) và đo lường sự mù lòa thời gian.  
 * **Sprint 3 — Targeted Improvement:** Khai triển lớp Time2Vec tại module Input. Xây dựng cấu trúc Hàng đợi Bộ nhớ Phiên trong VRAM, tích hợp Welford Update và Ledoit-Wolf Shrinkage để tối ưu không gian Vector.  
-* **Sprint 4 — Main Experiments:** Huấn luyện hoàn chỉnh phiên bản TAC-LAnoBERT. Chạy thực nghiệm đối kháng Baseline vs Improved với hạt giống ngẫu nhiên tĩnh (seed \= 42).  
+* **Sprint 4 — Main Experiments:** Huấn luyện hoàn chỉnh phiên bản TAC-LAnoBERT. Chạy thực nghiệm đối kháng Baseline vs Improved với hạt giống ngẫu nhiên tĩnh (seed = 42).  
 * **Sprint 5 — Ablation/Robustness:** Thực thi các bài phân tích Cắt bỏ (tách riêng tác động của mô-đun Thời gian và mô-đun Hàng đợi). Phân tích sai số (Error Analysis) trên các biểu đồ cảnh báo sai.  
 * **Sprint 6 — Early Detection/Efficiency:** Xây dựng module đánh giá DLT tự động bằng cách dò tìm khoảng cách thời gian lùi từ các nhãn lỗi FATAL. Trắc lượng hệ thống (Profiling) để đo đạc Inference Latency xác minh dưới 10ms.  
 * **Sprint 7 — Final Evaluation/Artifact Freeze:** Thực hiện kiểm định thống kê Wilcoxon Signed-Rank Test trên các tập kết quả. Chốt phiên bản Artifacts, hoàn thiện tài liệu mô tả, đóng băng cấu hình (Config Snapshot) và xuất bản mã nguồn mở.
@@ -271,11 +271,11 @@ Việc hoàn tất dự án được chứng minh thông qua các Tiêu chí Ch�
 
 Báo cáo chính thức ấn định và đóng băng **01 Technical Design duy nhất** cho toàn bộ quá trình khai triển hệ thống luận văn Thạc sĩ: Khung Kiến trúc TAC-LAnoBERT.
 
-* **Baseline:** LAnoBERT (Yukyung Lee et al., Applied Soft Computing, 2023\)5.  
-* **Main Improvement:** Cấy ghép Nhúng Thời gian Động (Time2Vec) vào tensor đầu vào để nhận thức nhịp điệu sinh sự kiện; song hành cùng Hàng đợi Bộ nhớ Phiên Liên tục lưu trữ vector \[CLS\] để đối chiếu khoảng cách không gian Mahalanobis điều chuẩn4.  
+* **Baseline:** LAnoBERT (Yukyung Lee et al., Applied Soft Computing, 2023)5.  
+* **Main Improvement:** Cấy ghép Nhúng Thời gian Động (Time2Vec) vào tensor đầu vào để nhận thức nhịp điệu sinh sự kiện; song hành cùng Hàng đợi Bộ nhớ Phiên Liên tục lưu trữ vector [CLS] để đối chiếu khoảng cách không gian Mahalanobis điều chuẩn4.  
 * **Unchanged Components:** Toàn bộ cơ chế tiền xử lý không cần phân tích cú pháp (Parser-free WordPiece Tokenizer), 12 lớp cấu trúc Transformer Base, và Hàm mất mát Cross-Entropy.  
 * **Core Experiment:** Trận chiến thực nghiệm đối kháng LAnoBERT vs. TAC-LAnoBERT thông qua Phân tích Cắt bỏ có kiểm soát (Ablation).  
-* **Primary Success Criterion:** Sự kéo giãn đáng kể, có ý nghĩa thống kê thực tiễn của Thời gian dẫn phát hiện (Detection Lead Time \- DLT), đi kèm với sự suy giảm Tỷ lệ Cảnh báo giả (FPR) trong các pha nhiễu động tải lượng hệ thống.  
+* **Primary Success Criterion:** Sự kéo giãn đáng kể, có ý nghĩa thống kê thực tiễn của Thời gian dẫn phát hiện (Detection Lead Time - DLT), đi kèm với sự suy giảm Tỷ lệ Cảnh báo giả (FPR) trong các pha nhiễu động tải lượng hệ thống.  
 * **Secondary Criteria:** Tính toán hiệu suất trực tuyến đảm bảo Inference Latency ![][image66]ms để thỏa mãn nhu cầu xử lý Streaming thực tiễn của hạ tầng viễn trắc4.
 
 ## **27\. Q1/Q2 Ranking and Publication Verification**
@@ -296,31 +296,31 @@ Bảng ma trận truy xuất nguồn gốc cuối cùng liên kết chặt chẽ
 
 | Research Question / Hypothesis | Technical Component | Experiment | Metric | Acceptance Criterion |
 | :---- | :---- | :---- | :---- | :---- |
-| **RQ1:** Sự mù lòa thời gian có làm tăng dương tính giả khi tải hệ thống biến động không? | LAnoBERT nguyên bản (Baseline Module) xử lý log chỉ với Absolute Positional Encoding tĩnh. | Khảo sát Baseline trong điều kiện mô phỏng tải động (Spikes Simulation \- E1, E5). | FPR (Tỷ lệ Dương tính Giả). | Lượng báo động giả tăng vọt ![][image72] khi tốc độ sinh log bị nén lại dù lỗi cú pháp không xuất hiện4. |
-| **RQ2:** Việc bổ sung vector biểu diễn thời gian vật lý có giải quyết được điểm nghẽn FPR? | Mô-đun Time-Delta Extractor và Time2Vec Linear Projection ở tầng đầu vào của mạng BERT. | Phân tích Cắt bỏ (Biến thể LAnoBERT \+ Time2Vec) \- E3. | FPR, Precision tại pha tải động. | FPR giảm thiểu mạnh mẽ và có ý nghĩa thống kê so với bản nguyên thủy (xác minh qua Wilcoxon test). |
-| **RQ3:** Việc đối chiếu trạng thái quá khứ có cho phép phát hiện sớm trước lỗi sụp đổ không? | Mô-đun Continual Session Memory Queue & thuật toán Ledoit-Wolf Shrinkage Mahalanobis ở tầng suy luận. | Phân tích Cắt bỏ (Biến thể LAnoBERT \+ Memory Queue) \- E3. | DLT (Detection Lead Time) bằng phút. | Khoảng thời gian DLT gia tăng với Effect Size ![][image73] (Cohen's ![][image20]), chứng minh sự dự báo có độ lớn thực tiễn. |
+| **RQ1:** Sự mù lòa thời gian có làm tăng dương tính giả khi tải hệ thống biến động không? | LAnoBERT nguyên bản (Baseline Module) xử lý log chỉ với Absolute Positional Encoding tĩnh. | Khảo sát Baseline trong điều kiện mô phỏng tải động (Spikes Simulation - E1, E5). | FPR (Tỷ lệ Dương tính Giả). | Lượng báo động giả tăng vọt ![][image72] khi tốc độ sinh log bị nén lại dù lỗi cú pháp không xuất hiện4. |
+| **RQ2:** Việc bổ sung vector biểu diễn thời gian vật lý có giải quyết được điểm nghẽn FPR? | Mô-đun Time-Delta Extractor và Time2Vec Linear Projection ở tầng đầu vào của mạng BERT. | Phân tích Cắt bỏ (Biến thể LAnoBERT + Time2Vec) - E3. | FPR, Precision tại pha tải động. | FPR giảm thiểu mạnh mẽ và có ý nghĩa thống kê so với bản nguyên thủy (xác minh qua Wilcoxon test). |
+| **RQ3:** Việc đối chiếu trạng thái quá khứ có cho phép phát hiện sớm trước lỗi sụp đổ không? | Mô-đun Continual Session Memory Queue & thuật toán Ledoit-Wolf Shrinkage Mahalanobis ở tầng suy luận. | Phân tích Cắt bỏ (Biến thể LAnoBERT + Memory Queue) - E3. | DLT (Detection Lead Time) bằng phút. | Khoảng thời gian DLT gia tăng với Effect Size ![][image73] (Cohen's ![][image20]), chứng minh sự dự báo có độ lớn thực tiễn. |
 | **H1:** Sự kết hợp hoàn chỉnh của cả hai mô-đun tạo ra một hệ thống dự báo vượt trội. | TAC-LAnoBERT (Hybrid Proactive Anomaly Detector). | Kiểm thử đối kháng tổng thể (E2). | EWR (Early Warning Rate), PR-AUC. | EWR tăng lên; Hệ thống xác định đúng các chuỗi tiền sự cố mờ nhạt từ nhiều giờ trước4. |
 | **H2:** Sự can thiệp ở tầng truy hồi cấu trúc hiệp phương sai không phá hủy độ trễ streaming. | Thuật toán Online Welford Update thay vì toán tử tính lại trung bình và phương sai cơ bản. | Trắc lượng hồ sơ phần cứng (Profiling) qua hàng ngàn cửa sổ lô (E6). | Inference Latency (ms), Memory Overhead (MB). | Độ trễ suy luận cho mỗi cửa sổ duy trì vững chắc dưới ![][image74]ms; chi phí VRAM của Queue duy trì ![][image75]MB. |
 
 #### **Nguồn trích dẫn**
 
-> 1. IEEE 1016 Software Design Specification | PDF \- Scribd, [https://www.scribd.com/document/222575860/Ieee-Standard-1016](https://www.scribd.com/document/222575860/Ieee-Standard-1016)  
-> 2. Software design description \- Wikipedia, [https://en.wikipedia.org/wiki/Software\_design\_description](https://en.wikipedia.org/wiki/Software_design_description)  
-> 3. 1016-2009 \- IEEE Standard for Software Design Descriptions (SDDs), [https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541](https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541)  
+> 1. IEEE 1016 Software Design Specification | PDF - Scribd, [https://www.scribd.com/document/222575860/Ieee-Standard-1016](https://www.scribd.com/document/222575860/Ieee-Standard-1016)  
+> 2. Software design description - Wikipedia, [https://en.wikipedia.org/wiki/Software_design_description](https://en.wikipedia.org/wiki/Software_design_description)  
+> 3. 1016-2009 - IEEE Standard for Software Design Descriptions (SDDs), [https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541](https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541)  
 > 4. result-5.md  
-> 5. LAnoBERT: System log anomaly detection based on BERT masked, [https://www.researchgate.net/publication/372942014\_LAnoBERT\_System\_log\_anomaly\_detection\_based\_on\_BERT\_masked\_language\_model](https://www.researchgate.net/publication/372942014_LAnoBERT_System_log_anomaly_detection_based_on_BERT_masked_language_model)  
+> 5. LAnoBERT: System log anomaly detection based on BERT masked, [https://www.researchgate.net/publication/372942014_LAnoBERT_System_log_anomaly_detection_based_on_BERT_masked_language_model](https://www.researchgate.net/publication/372942014_LAnoBERT_System_log_anomaly_detection_based_on_BERT_masked_language_model)  
 > 6. LAnoBERT: System log anomaly detection based on BERT masked, [https://pure.korea.ac.kr/en/publications/lanobert-system-log-anomaly-detection-based-on-bert-masked-langua/](https://pure.korea.ac.kr/en/publications/lanobert-system-log-anomaly-detection-based-on-bert-masked-langua/)  
-> 7. Applied Soft Computing Journal \- Impact Factor (IF), Overall Ranking, [https://www.resurchify.com/impact/details/18136](https://www.resurchify.com/impact/details/18136)  
-> 8. Towards Multi-System Log Anomaly Detection \- ACL Anthology, [https://aclanthology.org/2025.acl-industry.8.pdf](https://aclanthology.org/2025.acl-industry.8.pdf)  
+> 7. Applied Soft Computing Journal - Impact Factor (IF), Overall Ranking, [https://www.resurchify.com/impact/details/18136](https://www.resurchify.com/impact/details/18136)  
+> 8. Towards Multi-System Log Anomaly Detection - ACL Anthology, [https://aclanthology.org/2025.acl-industry.8.pdf](https://aclanthology.org/2025.acl-industry.8.pdf)  
 > 9. Software Design Descriptions (SDD), [https://wildart.github.io/MISG5020/SDD.html](https://wildart.github.io/MISG5020/SDD.html)  
 > 10. What Information Contributes to Log-based Anomaly Detection, [https://arxiv.org/pdf/2409.20503](https://arxiv.org/pdf/2409.20503)  
-> 11. LogBERT: Log Anomaly Detection via BERT | Request PDF, [https://www.researchgate.net/publication/354743341\_LogBERT\_Log\_Anomaly\_Detection\_via\_BERT](https://www.researchgate.net/publication/354743341_LogBERT_Log_Anomaly_Detection_via_BERT)  
-> 12. Anomaly Detection Algorithms for Real-Time Log Data Analysis at, [https://publikacio.ppke.hu/id/eprint/2760/1/Anomaly\_Detection\_Algorithms\_for\_Real-Time\_Log\_Data\_Analysis\_at\_Scale.pdf](https://publikacio.ppke.hu/id/eprint/2760/1/Anomaly_Detection_Algorithms_for_Real-Time_Log_Data_Analysis_at_Scale.pdf)  
-> 13. ADAL-NN: Anomaly Detection and Localization Using Deep ... \- MDPI, [https://www.mdpi.com/2076-3417/13/12/7297](https://www.mdpi.com/2076-3417/13/12/7297)  
+> 11. LogBERT: Log Anomaly Detection via BERT | Request PDF, [https://www.researchgate.net/publication/354743341_LogBERT_Log_Anomaly_Detection_via_BERT](https://www.researchgate.net/publication/354743341_LogBERT_Log_Anomaly_Detection_via_BERT)  
+> 12. Anomaly Detection Algorithms for Real-Time Log Data Analysis at, [https://publikacio.ppke.hu/id/eprint/2760/1/Anomaly_Detection_Algorithms_for_Real-Time_Log_Data_Analysis_at_Scale.pdf](https://publikacio.ppke.hu/id/eprint/2760/1/Anomaly_Detection_Algorithms_for_Real-Time_Log_Data_Analysis_at_Scale.pdf)  
+> 13. ADAL-NN: Anomaly Detection and Localization Using Deep ... - MDPI, [https://www.mdpi.com/2076-3417/13/12/7297](https://www.mdpi.com/2076-3417/13/12/7297)  
 > 14. Representation Learning for Time Series using Time-Embeddings, [https://arxiv.org/html/2310.04486v3](https://arxiv.org/html/2310.04486v3)  
-> 15. Embedding Models for Multivariate Time Series Anomaly Detection, [https://github.com/DSG-UniFE/Embedding\_Models\_for\_MTS\_Anomaly\_Detection\_in\_I5.0](https://github.com/DSG-UniFE/Embedding_Models_for_MTS_Anomaly_Detection_in_I5.0)  
+> 15. Embedding Models for Multivariate Time Series Anomaly Detection, [https://github.com/DSG-UniFE/Embedding_Models_for_MTS_Anomaly_Detection_in_I5.0](https://github.com/DSG-UniFE/Embedding_Models_for_MTS_Anomaly_Detection_in_I5.0)  
 > 16. Practitioners' Expectations on Log Anomaly Detection, [https://www.computer.org/csdl/journal/ts/2025/09/11072823/28bF7vU17xe](https://www.computer.org/csdl/journal/ts/2025/09/11072823/28bF7vU17xe)  
-> 17. ‪Yukyung Lee‬ \- ‪Google 学术搜索‬, [https://scholar.google.jp/citations?user=V6Hm5rEAAAAJ\&hl=zh-CN](https://scholar.google.jp/citations?user=V6Hm5rEAAAAJ&hl=zh-CN)
+> 17. ‪Yukyung Lee‬ - ‪Google 学术搜索‬, [https://scholar.google.jp/citations?user=V6Hm5rEAAAAJ\&hl=zh-CN](https://scholar.google.jp/citations?user=V6Hm5rEAAAAJ&hl=zh-CN)
 
 [image1]: <data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAZCAYAAACo79dmAAACA0lEQVR4Xu2WO0hcQRiFfwW1UIzBQCpBbawUaxOQkEdtCsFaREhEUbCJiFZ2QUiXdBFBC4mNXbrERgQLsbFQGxNRJPgAHxh8/IeZ2Z09mbt3NmSFwH5w2LvfnHvvMDvcuyIl/i+eskihh0WhvNA8ssdlmmnNmKY+0whzLqZfCM2adZax/NLM2ONTzY3m1suIHWO+azpZeoxq3rC0fNB8YpmPOjGTabXfcfwqOyx91iFMk4T9vOZKsue9zR3OIXR+Iih32eMdzYY35nCr/Jj8keY1OSZtsrMSuR32Ncf2uE3MhUN7D9sDY93kY1YlbbIPJOI6jWJKKIMlTUNmNBfsV3Q7PNdrXRppkwXo1LL0OZG4m4Gv8md3VfOTXIjYyb5j6YMCTyAJt2fZLZMLgfMGWBLouCdREBRwwxjQnQy4vDewoDfIkrjQrLD0iV3ZcQn34D6zDIDeEEviTLPG0idmshViOu6t5nOp+cYyAM4fZkmgs8jSZ1tMaYsHLG6iT3jAgmfjLssAuEbS28+BDl7riZRLdnWxZ1qsr9LMWV9jXYh+Sf9l8Iug854HCHQesmQqNb8lO2mX534pD0mTXdAcan6IWX18Hoh5BTPVknydfwpu8pJlgXzUfGFZDNol/vGXxL2sqmNPzKT/hgnNFMtic80iAvyD22R5XzxjkULai6JECccdKw+D3/du3i8AAAAASUVORK5CYII=>
 
