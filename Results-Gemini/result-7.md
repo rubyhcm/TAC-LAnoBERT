@@ -1,7 +1,7 @@
 # **Đặc Tả Thiết Kế Phần Mềm (IEEE 1016): Hệ Thống Cảnh Báo Sớm Bất Thường Log Dựa Trên TAC-LAnoBERT**
 
-Tài liệu này cung cấp Đặc tả Thiết kế Phần mềm (Software Design Description \- SDD) toàn diện, được biên soạn theo các nguyên tắc và cấu trúc của tiêu chuẩn quốc tế IEEE 10161. Tiêu chuẩn IEEE 1016 thiết lập một khuôn khổ thống nhất để ghi nhận thông tin thiết kế, giải quyết các mối quan tâm của các bên liên quan và truyền đạt kiến trúc hệ thống một cách minh bạch, phục vụ trực tiếp cho việc xác minh và thẩm định phần mềm1. Trong bối cảnh nghiên cứu học thuật, SDD đóng vai trò là xương sống đảm bảo tính toàn vẹn của thực nghiệm, định hình một kiến trúc phần mềm có khả năng tái lập (reproducible) tuyệt đối2.  
-Hệ thống phần mềm được thiết kế tại đây phục vụ cho mục tiêu cải tiến phương pháp cơ sở LAnoBERT (công bố năm 2023 trên tạp chí Q1), thông qua việc tích hợp Động lực học Thời gian (Time2Vec) và Hàng đợi Bộ nhớ Phiên Liên tục (Continual Session Memory Queue). Kiến trúc lai này, được gọi là TAC-LAnoBERT, nhằm mục đích chuyển đổi một mô hình ngôn ngữ che khuất phản ứng thành một hệ thống cảnh báo sớm chủ động, tối đa hóa Thời gian dẫn phát hiện (Detection Lead Time \- DLT) cho dữ liệu log của hệ thống phân tán6. Phần mềm được thiết kế với sự cô lập nghiêm ngặt giữa phương pháp cơ sở và mô-đun cải tiến, sử dụng các mẫu thiết kế hướng đối tượng để đảm bảo mọi so sánh thực nghiệm đều diễn ra trong một môi trường có kiểm soát, loại trừ hoàn toàn rủi ro rò rỉ dữ liệu tương lai7.
+Tài liệu này cung cấp Đặc tả Thiết kế Phần mềm (Software Design Description - SDD) toàn diện, được biên soạn theo các nguyên tắc và cấu trúc của tiêu chuẩn quốc tế IEEE 10161. Tiêu chuẩn IEEE 1016 thiết lập một khuôn khổ thống nhất để ghi nhận thông tin thiết kế, giải quyết các mối quan tâm của các bên liên quan và truyền đạt kiến trúc hệ thống một cách minh bạch, phục vụ trực tiếp cho việc xác minh và thẩm định phần mềm1. Trong bối cảnh nghiên cứu học thuật, SDD đóng vai trò là xương sống đảm bảo tính toàn vẹn của thực nghiệm, định hình một kiến trúc phần mềm có khả năng tái lập (reproducible) tuyệt đối2.  
+Hệ thống phần mềm được thiết kế tại đây phục vụ cho mục tiêu cải tiến phương pháp cơ sở LAnoBERT (công bố năm 2023 trên tạp chí Q1), thông qua việc tích hợp Động lực học Thời gian (Time2Vec) và Hàng đợi Bộ nhớ Phiên Liên tục (Continual Session Memory Queue). Kiến trúc lai này, được gọi là TAC-LAnoBERT, nhằm mục đích chuyển đổi một mô hình ngôn ngữ che khuất phản ứng thành một hệ thống cảnh báo sớm chủ động, tối đa hóa Thời gian dẫn phát hiện (Detection Lead Time - DLT) cho dữ liệu log của hệ thống phân tán6. Phần mềm được thiết kế với sự cô lập nghiêm ngặt giữa phương pháp cơ sở và mô-đun cải tiến, sử dụng các mẫu thiết kế hướng đối tượng để đảm bảo mọi so sánh thực nghiệm đều diễn ra trong một môi trường có kiểm soát, loại trừ hoàn toàn rủi ro rò rỉ dữ liệu tương lai7.
 
 ## **1\. Kiểm tra Design Freeze**
 
@@ -12,8 +12,8 @@ Bảng dưới đây ánh xạ các thành phần nghiên cứu đã được ph
 | :---- | :---- | :---- | :---- |
 | **Baseline** | Phương pháp LAnoBERT (Yukyung Lee et al.). Sử dụng bộ mã hóa BERT Base, không phân tích cú pháp (Parser-free), huấn luyện hàm mất mát Masked Language Modeling (MLM)6. | Tạp chí *Applied Soft Computing*, Q1 (SCImago/JCR). Xuất bản chính thức năm 2023\. DOI: 10.1016/j.asoc.2023.1106896. | Phần mềm khởi tạo cấu trúc transformers.BertForMaskedLM từ HuggingFace. Kế thừa tokenizer WordPiece và giữ nguyên tính toán Cross-Entropy cục bộ trên từng cửa sổ 512 tokens6. |
 | **Hạn chế** | Mù lòa thời gian (Time-Delta Blindness) và Thiển cận ngữ cảnh (Contextual Myopia) do giới hạn tầm nhìn độc lập theo từng khối sự kiện ngắn7. | Được xác nhận chéo thông qua các nghiên cứu về hệ thống HPC và vi dịch vụ đám mây (điển hình như DualBERT, FALL)7. | Phần mềm cơ sở không duy trì luồng dữ liệu trạng thái bộ nhớ ngoài; bộ đệm (buffer) sẽ tự động xóa toàn bộ ngữ cảnh sau mỗi lượt trượt cửa sổ (sliding window). |
-| **Cải thiện có mục tiêu** | TAC-LAnoBERT: Cấy ghép Nhúng Thời gian Động (Time2Vec) và thiết lập Hàng đợi Bộ nhớ Phiên Liên tục sử dụng Khoảng cách Mahalanobis điều chuẩn7. | Các cải tiến trực tiếp khắc phục điểm nghẽn bằng cơ chế toán học đã được bình duyệt, bảo vệ độ phức tạp tuyến tính cho truy xuất7. | Phát triển một lớp PyTorch tùy chỉnh Time2VecLayer. Triển khai cấu trúc dữ liệu VRAM\_FIFO\_Queue kết hợp thuật toán Welford để cập nhật hiệp phương sai trực tuyến ![][image1]6. |
-| **Thực nghiệm chính** | So sánh đối kháng có kiểm soát: Baseline nguyên bản vs. TAC-LAnoBERT. Phân tích cắt bỏ (Ablation) để cô lập tác động của từng mô-đun7. | Phù hợp với chuẩn mực đánh giá thiết kế phần mềm thực chứng7. | Lớp ExperimentRunner cung cấp các chế độ chạy qua cấu hình YAML: mode\_baseline, mode\_improved, mode\_ablation\_time, mode\_ablation\_memory. |
+| **Cải thiện có mục tiêu** | TAC-LAnoBERT: Cấy ghép Nhúng Thời gian Động (Time2Vec) và thiết lập Hàng đợi Bộ nhớ Phiên Liên tục sử dụng Khoảng cách Mahalanobis điều chuẩn7. | Các cải tiến trực tiếp khắc phục điểm nghẽn bằng cơ chế toán học đã được bình duyệt, bảo vệ độ phức tạp tuyến tính cho truy xuất7. | Phát triển một lớp PyTorch tùy chỉnh Time2VecLayer. Triển khai cấu trúc dữ liệu VRAM_FIFO_Queue kết hợp thuật toán Welford để cập nhật hiệp phương sai trực tuyến ![][image1]6. |
+| **Thực nghiệm chính** | So sánh đối kháng có kiểm soát: Baseline nguyên bản vs. TAC-LAnoBERT. Phân tích cắt bỏ (Ablation) để cô lập tác động của từng mô-đun7. | Phù hợp với chuẩn mực đánh giá thiết kế phần mềm thực chứng7. | Lớp ExperimentRunner cung cấp các chế độ chạy qua cấu hình YAML: mode_baseline, mode_improved, mode_ablation_time, mode_ablation_memory. |
 | **Metric chính** | DLT (Detection Lead Time), FPR, PR-AUC, Latency (Độ trễ suy luận), Memory Overhead7. | Đánh giá năng lực dự báo sớm định lượng, dịch chuyển từ các độ đo tĩnh sang hệ quy chiếu thời gian thực7. | Mô-đun Evaluator độc lập, chuyên trách tính toán chênh lệch thời gian vật lý giữa tín hiệu vượt ngưỡng (Alert) và nhãn sập hệ thống (Failure). |
 
 Sự đối chiếu khắt khe này đảm bảo mọi dòng mã được viết ra đều truy vết trực tiếp về một yêu cầu khoa học hợp lệ, ngăn chặn việc cài cắm các thư viện hoặc thuật toán ngoại lai không phục vụ cho mục tiêu nghiên cứu cốt lõi.
@@ -64,12 +64,12 @@ Luồng giao diện chính (Inference Flow) vận hành theo chuỗi tuần tự
 
 | Module Interface | Mục đích và Trách nhiệm | Schema Đầu vào | Schema Đầu ra | Xử lý Trường hợp Lỗi |
 | :---- | :---- | :---- | :---- | :---- |
-| **Window Generator** | Gom cụm các dòng log thô thành khối 512 tokens. Tính toán độ trễ thời gian ![][image3] giữa các sự kiện. | List\[Tuple\[Timestamp, Raw\_Log\]\] | Token\_IDs\[512\], Time\_Deltas\[512\] | Nếu dữ liệu rỗng hoặc nhãn thời gian định dạng sai, hệ thống ghi log cảnh báo và tự động bỏ qua (drop). |
-| **Representation** | Hợp nhất Token Embeddings, Positional Embeddings và Time-Delta Embeddings qua phép cộng tuyến tính. | Token\_IDs, Time\_Deltas | Fused\_Tensor (Kích thước: ![][image4]) | DimensionMismatchError nếu số chiều của khối Time2Vec cấu hình không khớp với BERT. |
-| **TAC-LAnoBERT Core** | Tính toán tự chú ý qua 12 lớp Transformer để nắm bắt ngữ cảnh hai chiều. | Fused\_Tensor | Hidden\_States, \[CLS\]\_Vector (768 chiều) | OutOfMemoryError nếu kích thước lô (batch) vượt quá giới hạn cấp phát của VRAM phần cứng. |
-| **Retrieval/Memory Queue** | Lưu trữ lịch sử \[CLS\], cập nhật hiệp phương sai, và tính Khoảng cách Mahalanobis điều chuẩn. | \[CLS\]\_Vector, Kích thước Hàng đợi ![][image5] | Mahalanobis\_Dist (Vô hướng) | Nếu hệ số điều chuẩn Ledoit-Wolf cấu hình sai dẫn đến ma trận kỳ dị, kích hoạt Fallback tính toán Cosine Distance. |
-| **Prediction** | Tính điểm rủi ro lai (Hybrid Score) và so sánh với ngưỡng tự động để xuất quyết định. | MLM\_Loss, Mahalanobis\_Dist | Risk\_Score, Alert\_Flag (Boolean) | Nếu tham số trọng số ![][image6] nằm ngoài khoảng ![][image7], hệ thống ném ra ValueError và dừng pipeline. |
-| **Early Detection Evaluator** | Khớp tín hiệu cảnh báo với nhãn thời gian sập hệ thống thực tế để tính toán thời gian dẫn. | Alert\_Flag, Current\_Timestamp, Failure\_Timestamp | DLT (Phút), Is\_False\_Positive | Rò rỉ thời gian (Cảnh báo sau khi hệ thống đã sập). Kích hoạt logic phạt, ghi nhận giá trị 0 DLT. |
+| **Window Generator** | Gom cụm các dòng log thô thành khối 512 tokens. Tính toán độ trễ thời gian ![][image3] giữa các sự kiện. | List[Tuple[Timestamp, Raw_Log]] | Token_IDs[512], Time_Deltas[512] | Nếu dữ liệu rỗng hoặc nhãn thời gian định dạng sai, hệ thống ghi log cảnh báo và tự động bỏ qua (drop). |
+| **Representation** | Hợp nhất Token Embeddings, Positional Embeddings và Time-Delta Embeddings qua phép cộng tuyến tính. | Token_IDs, Time_Deltas | Fused_Tensor (Kích thước: ![][image4]) | DimensionMismatchError nếu số chiều của khối Time2Vec cấu hình không khớp với BERT. |
+| **TAC-LAnoBERT Core** | Tính toán tự chú ý qua 12 lớp Transformer để nắm bắt ngữ cảnh hai chiều. | Fused_Tensor | Hidden_States, [CLS]_Vector (768 chiều) | OutOfMemoryError nếu kích thước lô (batch) vượt quá giới hạn cấp phát của VRAM phần cứng. |
+| **Retrieval/Memory Queue** | Lưu trữ lịch sử [CLS], cập nhật hiệp phương sai, và tính Khoảng cách Mahalanobis điều chuẩn. | [CLS]_Vector, Kích thước Hàng đợi ![][image5] | Mahalanobis_Dist (Vô hướng) | Nếu hệ số điều chuẩn Ledoit-Wolf cấu hình sai dẫn đến ma trận kỳ dị, kích hoạt Fallback tính toán Cosine Distance. |
+| **Prediction** | Tính điểm rủi ro lai (Hybrid Score) và so sánh với ngưỡng tự động để xuất quyết định. | MLM_Loss, Mahalanobis_Dist | Risk_Score, Alert_Flag (Boolean) | Nếu tham số trọng số ![][image6] nằm ngoài khoảng ![][image7], hệ thống ném ra ValueError và dừng pipeline. |
+| **Early Detection Evaluator** | Khớp tín hiệu cảnh báo với nhãn thời gian sập hệ thống thực tế để tính toán thời gian dẫn. | Alert_Flag, Current_Timestamp, Failure_Timestamp | DLT (Phút), Is_False_Positive | Rò rỉ thời gian (Cảnh báo sau khi hệ thống đã sập). Kích hoạt logic phạt, ghi nhận giá trị 0 DLT. |
 
 Thiết kế giao diện này đảm bảo dữ liệu di chuyển liền mạch từ không gian văn bản thô sang không gian biểu diễn tensor, và cuối cùng hội tụ tại một quyết định logic nhị phân có khả năng truy vết hoàn toàn.
 
@@ -78,9 +78,9 @@ Thiết kế giao diện này đảm bảo dữ liệu di chuyển liền mạch
 Yêu cầu khắt khe nhất của nghiên cứu học thuật là bảo đảm sự công bằng tuyệt đối trong thực nghiệm so sánh7. Hệ thống cải tiến không được phép có bất kỳ lợi thế nào về dữ liệu hoặc siêu tham số cốt lõi so với phương pháp cơ sở. Để hiện thực hóa điều này, phần mềm áp dụng mẫu thiết kế Dependency Injection để quản lý vòng đời của mạng học sâu.  
 Phần mềm định nghĩa một siêu lớp kiến trúc BaseLogDetector. Lớp này thiết lập bộ khung tải cấu trúc Transformer và xử lý tokenizer. Các chế độ thực thi được điều khiển trực tiếp thông qua các thông số cấu hình thời gian chạy (runtime parameters), cho phép định hình động luồng xử lý của hệ thống:
 
-> 1. **Chế độ Baseline (mode=baseline):** Lớp kiến trúc kích hoạt công tắc đóng băng (bypass switch). Mô-đun Time-Delta Extractor bị ép buộc trả về tensor có giá trị ![][image8], vô hiệu hóa hoàn toàn mạng Time2Vec. Nhánh rẽ tới Retrieval/Memory Queue bị bỏ qua. Điểm rủi ro cuối cùng chỉ được quyết định bởi giá trị MLM\_Loss cục bộ. Cơ chế này đảm bảo mô phỏng chính xác 100% logic phản ứng thụ động của LAnoBERT.  
-> 2. **Chế độ Improved (mode=improved):** Các cờ tính năng (feature flags) cho cả mô-đun nhận thức thời gian vật lý và Hàng đợi Bộ nhớ được bật. Hàm tính điểm lai Hybrid\_Score được kích hoạt, lấy dữ liệu từ cả hai nhánh kiến trúc để ra quyết định dựa trên sự lệch chuẩn quỹ đạo.  
-> 3. **Chế độ Ablation (mode=ablation\_time hoặc mode=ablation\_memory):** Hệ thống tắt có chọn lọc một trong hai cờ tính năng. Chế độ này phục vụ trực tiếp cho việc định lượng mức độ đóng góp độc lập của động lực học thời gian hoặc bộ nhớ liên tục vào độ đo tổng thể.
+> 1. **Chế độ Baseline (mode=baseline):** Lớp kiến trúc kích hoạt công tắc đóng băng (bypass switch). Mô-đun Time-Delta Extractor bị ép buộc trả về tensor có giá trị ![][image8], vô hiệu hóa hoàn toàn mạng Time2Vec. Nhánh rẽ tới Retrieval/Memory Queue bị bỏ qua. Điểm rủi ro cuối cùng chỉ được quyết định bởi giá trị MLM_Loss cục bộ. Cơ chế này đảm bảo mô phỏng chính xác 100% logic phản ứng thụ động của LAnoBERT.  
+> 2. **Chế độ Improved (mode=improved):** Các cờ tính năng (feature flags) cho cả mô-đun nhận thức thời gian vật lý và Hàng đợi Bộ nhớ được bật. Hàm tính điểm lai Hybrid_Score được kích hoạt, lấy dữ liệu từ cả hai nhánh kiến trúc để ra quyết định dựa trên sự lệch chuẩn quỹ đạo.  
+> 3. **Chế độ Ablation (mode=ablation_time hoặc mode=ablation_memory):** Hệ thống tắt có chọn lọc một trong hai cờ tính năng. Chế độ này phục vụ trực tiếp cho việc định lượng mức độ đóng góp độc lập của động lực học thời gian hoặc bộ nhớ liên tục vào độ đo tổng thể.
 
 Sự cô lập mã nguồn này đảm bảo rằng các định nghĩa về bộ tiêu chí đo lường (như DLT, FPR) được áp dụng chung cho mọi nhánh kiến trúc, không bị âm thầm thay đổi cấu trúc định lượng, từ đó mang lại kết quả đối kháng khách quan và có tính bảo vệ khoa học cao nhất.
 
@@ -90,30 +90,30 @@ Quản trị cấu hình là nền tảng của tính tái lập. Phần mềm s
 Các tệp cấu hình cốt lõi bao gồm:  
 **1\. dataset.yaml**
 
-* dataset\_name (String): Chỉ định nguồn dữ liệu viễn trắc. Mặc định: 'BGL'. Miền hợp lệ: \['BGL', 'Thunderbird'\]. (Biến thực nghiệm).  
-* window\_size (Integer): Chiều dài tối đa của chuỗi token. Mặc định: 512\. Trạng thái: Tham số cố định (Bảo vệ giới hạn của BERT).  
-* masking\_ratio (Float): Tỷ lệ token bị che khuất cho quá trình học tự giám sát MLM. Mặc định: 0.2. Trạng thái: Tham số cố định.
+* dataset_name (String): Chỉ định nguồn dữ liệu viễn trắc. Mặc định: 'BGL'. Miền hợp lệ: ['BGL', 'Thunderbird']. (Biến thực nghiệm).  
+* window_size (Integer): Chiều dài tối đa của chuỗi token. Mặc định: 512\. Trạng thái: Tham số cố định (Bảo vệ giới hạn của BERT).  
+* masking_ratio (Float): Tỷ lệ token bị che khuất cho quá trình học tự giám sát MLM. Mặc định: 0.2. Trạng thái: Tham số cố định.
 
 **2\. baseline.yaml**
 
-* hidden\_size (Integer): Kích thước biểu diễn vector nội tại. Mặc định: 768\. Trạng thái: Tham số cố định.  
-* num\_attention\_heads (Integer): Số đầu tự chú ý của mạng Transformer. Mặc định: 12\. Trạng thái: Tham số cố định.
+* hidden_size (Integer): Kích thước biểu diễn vector nội tại. Mặc định: 768\. Trạng thái: Tham số cố định.  
+* num_attention_heads (Integer): Số đầu tự chú ý của mạng Transformer. Mặc định: 12\. Trạng thái: Tham số cố định.
 
 **3\. improvement.yaml**
 
-* time2vec\_dim (Integer): Số chiều của vector Nhúng Thời gian Động. Mặc định: 64\. Miền hợp lệ: \[16, 128\]. Trạng thái: Tham số điều chỉnh trên validation.  
-* memory\_queue\_size (Integer): Số lượng trạng thái quá khứ lưu trữ trong VRAM (![][image5]). Mặc định: 100\. Miền hợp lệ: \[50, 1000\]. (Biến thực nghiệm).  
-* alpha\_hybrid\_weight (Float): Trọng số điều hòa lai giữa ngôn ngữ và không gian. Mặc định: 0.5. Miền hợp lệ: \[0.0, 1.0\]. Trạng thái: Tham số điều chỉnh.
+* time2vec_dim (Integer): Số chiều của vector Nhúng Thời gian Động. Mặc định: 64\. Miền hợp lệ: [16, 128]. Trạng thái: Tham số điều chỉnh trên validation.  
+* memory_queue_size (Integer): Số lượng trạng thái quá khứ lưu trữ trong VRAM (![][image5]). Mặc định: 100\. Miền hợp lệ: [50, 1000]. (Biến thực nghiệm).  
+* alpha_hybrid_weight (Float): Trọng số điều hòa lai giữa ngôn ngữ và không gian. Mặc định: 0.5. Miền hợp lệ: [0.0, 1.0]. Trạng thái: Tham số điều chỉnh.
 
 **4\. evaluation.yaml**
 
-* dlt\_threshold\_minutes (Integer): Thời gian đệm tối thiểu để một cảnh báo sớm được coi là hữu ích đối với kỹ sư SRE. Mặc định: 5\. Trạng thái: Tham số cố định.  
-* evt\_quantile\_risk (Float): Tham số phần trăm rủi ro đuôi (tail risk) cho tính toán ngưỡng POT. Mặc định: 0.01. Trạng thái: Tham số điều chỉnh.
+* dlt_threshold_minutes (Integer): Thời gian đệm tối thiểu để một cảnh báo sớm được coi là hữu ích đối với kỹ sư SRE. Mặc định: 5\. Trạng thái: Tham số cố định.  
+* evt_quantile_risk (Float): Tham số phần trăm rủi ro đuôi (tail risk) cho tính toán ngưỡng POT. Mặc định: 0.01. Trạng thái: Tham số điều chỉnh.
 
 **5\. experiment.yaml**
 
-* run\_mode (String): Xác định kịch bản chạy. Mặc định: 'baseline'. Miền hợp lệ: \['baseline', 'improved', 'ablation\_time', 'ablation\_memory'\].  
-* random\_seed (Integer): Hạt giống ngẫu nhiên toàn cục. Mặc định: 42\. Trạng thái: Tham số cố định. Đảm bảo tính tất định (determinism) cho mọi phép toán khởi tạo tensor.
+* run_mode (String): Xác định kịch bản chạy. Mặc định: 'baseline'. Miền hợp lệ: ['baseline', 'improved', 'ablation_time', 'ablation_memory'].  
+* random_seed (Integer): Hạt giống ngẫu nhiên toàn cục. Mặc định: 42\. Trạng thái: Tham số cố định. Đảm bảo tính tất định (determinism) cho mọi phép toán khởi tạo tensor.
 
 Hệ thống cung cấp cơ chế phân tích cú pháp tĩnh (static parser) khi nạp các tệp YAML này. Bất kỳ giá trị nào nằm ngoài miền hợp lệ sẽ ngăn chặn việc cấp phát VRAM và kết thúc chương trình kèm thông báo lỗi cấu hình.
 
@@ -122,8 +122,8 @@ Hệ thống cung cấp cơ chế phân tích cú pháp tĩnh (static parser) kh
 Mặc dù dựa trên kiến trúc Transformer, mô hình học sâu trong hệ thống này đóng vai trò là một Foundation Model theo hướng Bộ mã hóa thuần túy (Encoder-only Model), không ứng dụng các kỹ thuật sinh văn bản (Autoregressive Text Generation) vốn phổ biến trong các Mô hình Ngôn ngữ Lớn (LLMs) đương đại6. Quyết định thiết kế này tuân thủ chặt chẽ Yêu cầu Phi chức năng về độ trễ cực thấp trong môi trường phân tích luồng sự kiện (streaming log analysis).
 
 * **Model Interface:** Giao diện mô hình kế thừa trực tiếp từ bộ mã nguồn mở transformers của nền tảng HuggingFace. Bộ trọng số khởi tạo (pretrained weights) được nạp từ định danh bert-base-uncased, cùng với bộ từ vựng phụ (WordPiece tokenizer) tương ứng. Việc sử dụng trọng số công khai đảm bảo tính minh bạch và khả năng tái lập độc lập.  
-* **Provider/Adapter Boundary:** Để tiêm thông tin thời gian vật lý mà không làm hỏng không gian biểu diễn ngôn ngữ đã được học trước đó, một lớp phân giải Adapter được xây dựng. Lớp này nhận tensor biểu diễn tuần hoàn từ Time2Vec và hợp nhất thông qua phép cộng tuyến tính (Linear Addition) vào ma trận Word Embeddings trước khi truyền vào khối Transformer. Các tham số của lớp Time2Vec được thiết lập ở trạng thái requires\_grad=True để đồng huấn luyện với mạng lõi.  
-* **Quản lý Hyperparameters:** Hệ thống đóng băng (Freeze) cấu trúc vĩ mô của mạng bằng cách giới hạn số lớp (num\_hidden\_layers \= 12\) và chiều ẩn (hidden\_size \= 768). Việc thay đổi các siêu tham số này bị cấm nhằm tránh tạo ra một kiến trúc khác biệt hoàn toàn với công bố gốc của LAnoBERT.  
+* **Provider/Adapter Boundary:** Để tiêm thông tin thời gian vật lý mà không làm hỏng không gian biểu diễn ngôn ngữ đã được học trước đó, một lớp phân giải Adapter được xây dựng. Lớp này nhận tensor biểu diễn tuần hoàn từ Time2Vec và hợp nhất thông qua phép cộng tuyến tính (Linear Addition) vào ma trận Word Embeddings trước khi truyền vào khối Transformer. Các tham số của lớp Time2Vec được thiết lập ở trạng thái requires_grad=True để đồng huấn luyện với mạng lõi.  
+* **Quản lý Hyperparameters:** Hệ thống đóng băng (Freeze) cấu trúc vĩ mô của mạng bằng cách giới hạn số lớp (num_hidden_layers = 12) và chiều ẩn (hidden_size = 768). Việc thay đổi các siêu tham số này bị cấm nhằm tránh tạo ra một kiến trúc khác biệt hoàn toàn với công bố gốc của LAnoBERT.  
 * **Không sử dụng Prompt:** Là một bộ phân loại tự giám sát (Self-supervised Encoder), dữ liệu đầu vào của hệ thống là các luồng log thuần túy được chuyển đổi trực tiếp thành mã số. Hệ thống không sử dụng System/Task prompts hay phương pháp In-Context Learning. Các siêu tham số kiểm soát quá trình tạo sinh như nhiệt độ (Temperature) hoặc Top-p Sampling không tồn tại và không được áp dụng.
 
 ## **8\. Tính Toàn vẹn Dữ liệu và Thời gian**
@@ -145,7 +145,7 @@ Khác với các hệ thống Trí tuệ Nhân tạo tổng quát thường tíc
 
 ### **Ingestion & Metadata**
 
-Luồng tri thức được nạp (Ingestion) là vector trạng thái ngữ nghĩa ẩn của sự kiện hiện hành, được đại diện bởi token \[CLS\] (768 chiều). Siêu dữ liệu đính kèm duy nhất là nhãn thời gian kết thúc của khối log tương ứng. Cấu trúc lưu trữ là một bộ đệm vòng (Circular Buffer) duy trì hàng đợi FIFO, bảo tồn tối đa ![][image5] (ví dụ: 100\) trạng thái không gian vector hợp lệ và mới nhất của hệ thống.
+Luồng tri thức được nạp (Ingestion) là vector trạng thái ngữ nghĩa ẩn của sự kiện hiện hành, được đại diện bởi token [CLS] (768 chiều). Siêu dữ liệu đính kèm duy nhất là nhãn thời gian kết thúc của khối log tương ứng. Cấu trúc lưu trữ là một bộ đệm vòng (Circular Buffer) duy trì hàng đợi FIFO, bảo tồn tối đa ![][image5] (ví dụ: 100) trạng thái không gian vector hợp lệ và mới nhất của hệ thống.
 
 ### **Retrieval & Ranking**
 
@@ -157,7 +157,7 @@ Việc tính toán lại từ đầu trung bình mẫu và ma trận hiệp phư
 
 ### **Ledoit-Wolf Shrinkage & Mahalanobis Distance**
 
-Một đặc tính cố hữu trong toán học thống kê là khi dung lượng mẫu trong hàng đợi (![][image5]) nhỏ hơn số chiều của vector (![][image21]), ma trận hiệp phương sai mẫu ![][image19] sinh ra sẽ trở thành ma trận kỳ dị (singular matrix). Thử nghiệm thực thi mã Python cho thấy số điều kiện (condition number) của ma trận mẫu lên tới ![][image22], khiến việc nghịch đảo ma trận là bất khả thi15. Để khắc phục điểm yếu toán học này, phần mềm cấy ghép trực tiếp hàm điều chuẩn **Ledoit-Wolf Shrinkage**16. Thuật toán này điều hòa ma trận kỳ dị bằng cách co ngót nó về phía một ma trận mục tiêu (thường là ma trận đường chéo dựa trên vết của ma trận gốc): $$\\mathbf{S}{shrunk} \= (1 \- \\delta)\\mathbf{S} \+ \\delta \\frac{\\text{Tr}(\\mathbf{S})}{D} \\mathbf{I}$$Kỹ thuật này giúp giảm số điều kiện của ma trận xuống mức vô cùng an toàn (xấp xỉ 56.87 trong thực nghiệm đo lường)15. Hệ quả là ma trận $\\mathbf{S}{shrunk}$ luôn có thể được nghịch đảo một cách ổn định, cho phép phần mềm tính toán Khoảng cách Mahalanobis:  
+Một đặc tính cố hữu trong toán học thống kê là khi dung lượng mẫu trong hàng đợi (![][image5]) nhỏ hơn số chiều của vector (![][image21]), ma trận hiệp phương sai mẫu ![][image19] sinh ra sẽ trở thành ma trận kỳ dị (singular matrix). Thử nghiệm thực thi mã Python cho thấy số điều kiện (condition number) của ma trận mẫu lên tới ![][image22], khiến việc nghịch đảo ma trận là bất khả thi15. Để khắc phục điểm yếu toán học này, phần mềm cấy ghép trực tiếp hàm điều chuẩn **Ledoit-Wolf Shrinkage**16. Thuật toán này điều hòa ma trận kỳ dị bằng cách co ngót nó về phía một ma trận mục tiêu (thường là ma trận đường chéo dựa trên vết của ma trận gốc): $$\\mathbf{S}_{shrunk} = (1 - \\delta)\\mathbf{S} + \\delta \\frac{\\text{Tr}(\\mathbf{S})}{D} \\mathbf{I}$$Kỹ thuật này giúp giảm số điều kiện của ma trận xuống mức vô cùng an toàn (xấp xỉ 56.87 trong thực nghiệm đo lường)15. Hệ quả là ma trận $\\mathbf{S}_{shrunk}$ luôn có thể được nghịch đảo một cách ổn định, cho phép phần mềm tính toán Khoảng cách Mahalanobis:  
 ![][image23]  
 Toàn bộ các phép tính đại số tuyến tính này được lập trình để biên dịch thông qua thư viện torch.linalg.solve chạy trực tiếp trên GPU, duy trì hiệu suất truy hồi ở tốc độ cao nhất.
 
@@ -167,12 +167,12 @@ Thành phần phần mềm thực nghiệm đóng vai trò cốt lõi trong vi�
 Hệ thống hỗ trợ 5 kịch bản (Modes) vận hành độc lập:
 
 * **A — Baseline Mode:** Chế độ này vô hiệu hóa hoàn toàn kiến trúc can thiệp. Tensor của mô-đun Time2Vec bị ép nhân với 0, và Hàng đợi Bộ nhớ Phiên bị ngắt kết nối khỏi luồng Forward Pass. Hệ thống khởi chạy cấu trúc LAnoBERT nguyên thủy. Kết quả F1-score trên tập kiểm thử tĩnh được thu thập để thiết lập đường cơ sở đối chuẩn với bài báo gốc.  
-* **B — Improved Mode:** Chế độ vận hành TAC-LAnoBERT toàn vẹn. Cả tín hiệu nhịp điệu thời gian và đối chiếu quỹ đạo không gian đều được kích hoạt. Điểm số rủi ro tính toán dựa trên hàm lai alpha \* MLM \+ (1 \- alpha) \* Mahalanobis. Thu thập các độ đo cảnh báo sớm như DLT và FPR.  
+* **B — Improved Mode:** Chế độ vận hành TAC-LAnoBERT toàn vẹn. Cả tín hiệu nhịp điệu thời gian và đối chiếu quỹ đạo không gian đều được kích hoạt. Điểm số rủi ro tính toán dựa trên hàm lai alpha \* MLM + (1 - alpha) \* Mahalanobis. Thu thập các độ đo cảnh báo sớm như DLT và FPR.  
 * **C — Ablation Mode:** Chế độ phân tích cắt bỏ, chạy hai luồng đánh giá song song. Luồng C1 giữ lại Memory Queue nhưng tắt Time2Vec. Luồng C2 bật Time2Vec nhưng vô hiệu hóa Memory Queue. Thiết kế này tạo ra dữ liệu đối chiếu chéo để lập ma trận quy kết nhân quả cho từng cải tiến7.  
-* **D — Robustness Mode:** Chế độ kiểm thử độ bền vững. Hệ thống nạp một tập dữ liệu giả lập chứa hiện tượng "Bão sự kiện" (Workload spikes \- nhân đôi số lượng sự kiện log bình thường trong một khoảng thời gian cực ngắn nhưng không thay đổi cú pháp). Chế độ này đo lường hiện tượng mệt mỏi cảnh báo (Alert Fatigue) của Baseline so với mức độ điềm tĩnh của Improved.  
-* **E — Efficiency Mode:** Chế độ đo lường trắc lượng. Tắt toàn bộ luồng huấn luyện gradient, nạp tập test qua bộ theo dõi hiệu năng (PyTorch Profiler). Cấu hình này thu thập mức tiêu thụ VRAM đỉnh (Memory Overhead) và thời gian xử lý forward\_pass trung bình cho mỗi khối log.
+* **D — Robustness Mode:** Chế độ kiểm thử độ bền vững. Hệ thống nạp một tập dữ liệu giả lập chứa hiện tượng "Bão sự kiện" (Workload spikes - nhân đôi số lượng sự kiện log bình thường trong một khoảng thời gian cực ngắn nhưng không thay đổi cú pháp). Chế độ này đo lường hiện tượng mệt mỏi cảnh báo (Alert Fatigue) của Baseline so với mức độ điềm tĩnh của Improved.  
+* **E — Efficiency Mode:** Chế độ đo lường trắc lượng. Tắt toàn bộ luồng huấn luyện gradient, nạp tập test qua bộ theo dõi hiệu năng (PyTorch Profiler). Cấu hình này thu thập mức tiêu thụ VRAM đỉnh (Memory Overhead) và thời gian xử lý forward_pass trung bình cho mỗi khối log.
 
-Khi kết thúc mỗi luồng kịch bản, ExperimentRunner sẽ đóng gói một đối tượng dữ liệu trạng thái (State Object) bất biến chứa: Experiment\_ID, Configuration\_Hash, Dataset\_Version, Random\_Seed (cố định là 42), Metrics\_Dict, và đường dẫn hệ thống tệp lưu trữ Artifacts\_Paths.
+Khi kết thúc mỗi luồng kịch bản, ExperimentRunner sẽ đóng gói một đối tượng dữ liệu trạng thái (State Object) bất biến chứa: Experiment_ID, Configuration_Hash, Dataset_Version, Random_Seed (cố định là 42), Metrics_Dict, và đường dẫn hệ thống tệp lưu trữ Artifacts_Paths.
 
 ## **11\. Phần mềm Đánh giá**
 
@@ -185,14 +185,14 @@ Việc đánh giá hệ thống cảnh báo sớm bằng các độ đo truyền
 
 ### **Phát hiện Sớm (Early Detection Metrics)**
 
-* **Detection Lead Time (DLT):** Định lượng trực tiếp khoảng đệm thời gian sinh ra giữa mô hình và sự cố. Được công thức hóa bởi ![][image24]. Đơn vị tính: Phút. Các cảnh báo phát ra sau thời điểm sập hệ thống (DLT \< 0\) bị hệ thống đánh dấu phạt là 0 (Phản ứng muộn).  
+* **Detection Lead Time (DLT):** Định lượng trực tiếp khoảng đệm thời gian sinh ra giữa mô hình và sự cố. Được công thức hóa bởi ![][image24]. Đơn vị tính: Phút. Các cảnh báo phát ra sau thời điểm sập hệ thống (DLT < 0) bị hệ thống đánh dấu phạt là 0 (Phản ứng muộn).  
 * **Early Warning Rate (EWR):** Tính toán tỷ lệ phần trăm số lượng các sự cố sập (FATAL) có tín hiệu dự báo chính xác vượt qua một mốc đệm thời gian tối thiểu (ví dụ: ![][image25] phút).  
 * **False Positive Rate (FPR):** Số lượng cảnh báo phát ra sai (False Alarms) trên tổng số cửa sổ bình thường. Trọng tâm của phương pháp đánh giá này là tối ưu DLT trong khi vẫn phải kiềm chế FPR ở mức tiệm cận 0 (dưới 1%)7.
 
 ### **Hiệu quả Vận hành (Efficiency Metrics)**
 
 * **Latency (Độ trễ):** Thời gian suy luận từ lúc tensor đi vào BERT đến lúc ra được quyết định ngưỡng, tính bằng mili-giây (ms). Ngưỡng chấp nhận tiêu chuẩn ![][image26].  
-* **VRAM Memory Overhead:** Dung lượng (Megabytes \- MB) tiêu hao phát sinh thêm do việc cấp phát và duy trì cấu trúc Hàng đợi Trạng thái Vector.  
+* **VRAM Memory Overhead:** Dung lượng (Megabytes - MB) tiêu hao phát sinh thêm do việc cấp phát và duy trì cấu trúc Hàng đợi Trạng thái Vector.  
 * **Throughput:** Tốc độ thông lượng, quy đổi ra số lượng khối sự kiện log xử lý thành công trên mỗi giây.
 
 ## **12\. Logging và Xử lý Lỗi**
@@ -209,7 +209,7 @@ Khung ghi nhật ký (Logging) của hệ thống được lập trình với m�
 * OutOfMemoryError: Trong trường hợp khởi tạo số lượng batch quá lớn gây tràn VRAM, trình quản lý lỗi bắt ngoại lệ, tự động chia đôi kích thước Batch Size và khởi động lại luồng Forward Pass.  
 * CovarianceSingularError: Nếu ma trận hiệp phương sai ![][image27] vẫn bị xác định là không thể nghịch đảo do lỗi sai số dấu phẩy động (float precision limit), hệ thống sẽ không để pipeline sập. Thay vào đó, nó ghi nhận cảnh báo vào log và tự động fallback sang việc sử dụng thước đo Cosine Similarity cho lượt trượt cửa sổ hiện hành.  
 * ChronologicalLeakageWarning: Được kích hoạt liên tục trong vòng lặp nạp dữ liệu. Nếu phát hiện ![][image28], ngoại lệ ném ra một ValueError nghiêm trọng, đóng băng toàn bộ tiến trình phần mềm.  
-* DataFormatError: Bất kỳ dòng log viễn trắc nào bị khuyết nhãn Timestamp đều tự động bị loại bỏ (Drop) khỏi luồng xử lý và ghi mã băm vào tệp corrupted\_lines.log.
+* DataFormatError: Bất kỳ dòng log viễn trắc nào bị khuyết nhãn Timestamp đều tự động bị loại bỏ (Drop) khỏi luồng xử lý và ghi mã băm vào tệp corrupted_lines.log.
 
 ## **13\. Chiến lược Kiểm thử**
 
@@ -217,9 +217,9 @@ Tính hợp lệ của kết quả nghiên cứu phụ thuộc trực tiếp và
 
 ### **Unit Test (Kiểm thử Mức Đơn vị)**
 
-* test\_time2vec\_encoding: Khởi tạo một tensor đầu vào giả định, xác minh module trả về số chiều chính xác (![][image29]). Đảm bảo rằng các tham số sine/cosine được khởi tạo ngẫu nhiên nhưng có khả năng thay đổi giá trị và hội tụ sau một bước phép lan truyền ngược (backward pass) mô phỏng.  
-* test\_welford\_online\_update: Kiểm định thuật toán Welford trực tuyến bằng cách so sánh ma trận hiệp phương sai sinh ra từng bước với kết quả tính toán trên khối (batch) tĩnh của hàm numpy.cov(). Sai số dung sai tối đa cho phép là ![][image30].  
-* test\_shrinkage\_mahalanobis: Đảm bảo hàm khoảng cách Ledoit-Wolf xử lý đúng các tensor cực trị, luôn trả về một số vô hướng không âm và tuyệt đối không sinh ra giá trị lỗi phi số (NaN).
+* test_time2vec_encoding: Khởi tạo một tensor đầu vào giả định, xác minh module trả về số chiều chính xác (![][image29]). Đảm bảo rằng các tham số sine/cosine được khởi tạo ngẫu nhiên nhưng có khả năng thay đổi giá trị và hội tụ sau một bước phép lan truyền ngược (backward pass) mô phỏng.  
+* test_welford_online_update: Kiểm định thuật toán Welford trực tuyến bằng cách so sánh ma trận hiệp phương sai sinh ra từng bước với kết quả tính toán trên khối (batch) tĩnh của hàm numpy.cov(). Sai số dung sai tối đa cho phép là ![][image30].  
+* test_shrinkage_mahalanobis: Đảm bảo hàm khoảng cách Ledoit-Wolf xử lý đúng các tensor cực trị, luôn trả về một số vô hướng không âm và tuyệt đối không sinh ra giá trị lỗi phi số (NaN).
 
 ### **Integration Test (Kiểm thử Tích hợp)**
 
@@ -236,11 +236,11 @@ Tính hợp lệ của kết quả nghiên cứu phụ thuộc trực tiếp và
 ## **14\. Quản lý Artifact và Phiên bản**
 
 Quản trị tính tái lập yêu cầu mọi thực nghiệm khi kết thúc phải để lại một dấu vết các thành phần không thể bị chối cãi và không thể thay đổi. Phần mềm tự động sinh ra một cấu trúc thư mục vĩnh viễn cho mỗi lượt chạy.  
-Mỗi lượt chạy tạo một định danh đường dẫn tại artifacts/runs/run\_\<timestamp\>\_\<experiment\_id\>/, lưu trữ các tài nguyên sau:
+Mỗi lượt chạy tạo một định danh đường dẫn tại artifacts/runs/run_<timestamp>_<experiment_id>/, lưu trữ các tài nguyên sau:
 
-> 1. config\_snapshot.yaml: Bản sao chụp (snapshot) siêu tham số chính xác đã dùng tại thời điểm khởi chạy.  
-> 2. git\_hash.txt: Lưu lại đoạn mã băm (Git commit hash) của bộ mã nguồn thực thi, đảm bảo liên kết phiên bản code với kết quả.  
-> 3. dataset\_info.json: Ghi nhận mã băm MD5 của tệp dữ liệu đã nạp nhằm chống lại sự trôi dạt dữ liệu (data drift) nếu các tệp bị sửa đổi bên ngoài.  
+> 1. config_snapshot.yaml: Bản sao chụp (snapshot) siêu tham số chính xác đã dùng tại thời điểm khởi chạy.  
+> 2. git_hash.txt: Lưu lại đoạn mã băm (Git commit hash) của bộ mã nguồn thực thi, đảm bảo liên kết phiên bản code với kết quả.  
+> 3. dataset_info.json: Ghi nhận mã băm MD5 của tệp dữ liệu đã nạp nhằm chống lại sự trôi dạt dữ liệu (data drift) nếu các tệp bị sửa đổi bên ngoài.  
 > 4. models/: Thư mục lưu trữ các điểm kiểm tra (checkpoints) định dạng .pt, chứa trọng số của mạng Transformer và ma trận tham số tần số sóng của Time2Vec.  
 > 5. metrics/: Các tệp CSV ghi nhận giá trị DLT, FPR, PR-AUC thô cho từng cửa sổ sự kiện. Đây là kho dữ liệu nền tảng để vẽ lại các biểu đồ phân phối.  
 > 6. plots/: Các tệp ảnh (.png/.pdf) đồ thị đường cong Precision-Recall, phân phối DLT và phân phối ngưỡng cực trị được tự động xuất bởi hệ thống.
@@ -251,7 +251,7 @@ Mỗi lượt chạy tạo một định danh đường dẫn tại artifacts/ru
 
 Do dữ liệu log từ các hệ thống siêu máy tính mở (như BGL, Thunderbird) thường chứa các mẩu thông tin định tuyến thiết bị, một bộ quy định bảo mật tối thiểu được triển khai để ngăn chặn rò rỉ:
 
-* **Masking/Redaction (Che dấu Thông tin):** Trình tiền xử lý dữ liệu tích hợp một bộ lọc biểu thức chính quy (Regex filter) được biên dịch tĩnh. Không có API LLM bên ngoài nào được gọi để tránh đưa dữ liệu nghiên cứu lên các nền tảng đám mây thương mại. Các định dạng nhạy cảm như địa chỉ IP, địa chỉ MAC, và mã Hash định danh Node sẽ bị chuyển đổi thành các token vô danh như \[IP\_ADDR\], \[MAC\_ADDR\] trước khi bộ phân giải WordPiece bắt đầu quá trình token hóa.  
+* **Masking/Redaction (Che dấu Thông tin):** Trình tiền xử lý dữ liệu tích hợp một bộ lọc biểu thức chính quy (Regex filter) được biên dịch tĩnh. Không có API LLM bên ngoài nào được gọi để tránh đưa dữ liệu nghiên cứu lên các nền tảng đám mây thương mại. Các định dạng nhạy cảm như địa chỉ IP, địa chỉ MAC, và mã Hash định danh Node sẽ bị chuyển đổi thành các token vô danh như [IP_ADDR], [MAC_ADDR] trước khi bộ phân giải WordPiece bắt đầu quá trình token hóa.  
 * **Kiểm soát Khóa Bí mật (API Secrets Control):** Kiến trúc này vận hành mô hình học sâu như một thực thể cục bộ (Local Model Weight), loại bỏ rủi ro bảo mật liên quan đến API keys của các hãng Foundation Models (OpenAI, Anthropic). Mọi khóa kết nối nội bộ (nếu có, như key đồng bộ hóa kết quả lên hệ thống W\&B) phải được mã hóa vào tệp môi trường .env và tệp này được thiết lập ngoại trừ tuyệt đối khỏi kho mã nguồn thông qua .gitignore.
 
 ## **16\. Phạm vi Triển khai**
@@ -289,7 +289,7 @@ Quy trình nghiệm thu phần mềm (Acceptance Process) không dựa trên c�
 
 * **Baseline Acceptability (Tiêu chí Cơ sở):** Mã nguồn kế thừa thực thi ổn định. Cấu trúc bộ mã hóa BERT Base và hàm MLM loss không bị biến dạng hoặc chắp vá. Tái tạo F1-score trên dữ liệu tĩnh khớp với các công bố uy tín từ tác giả Yukyung Lee trong dung sai hợp lệ.  
 * **Improvement Acceptability (Tiêu chí Cải tiến):** Mô-đun Time2Vec và Memory Queue hoạt động biệt lập theo nguyên lý plug-and-play, có thể bật/tắt toàn vẹn thông qua cấu hình YAML mà không gây sụp đổ mã nguồn. Độ phức tạp tính toán trực tuyến của quá trình cập nhật Hàng đợi bộ nhớ đạt ![][image1] thay vì ![][image34] nhờ sức mạnh của thuật toán Welford.  
-* **Main Experiment Acceptability (Tiêu chí Thực nghiệm):** Giao thức Chronological Split hoạt động vô ngần; tập Validation và Test tuyệt đối không chứa điểm thời gian nhỏ hơn điểm kết thúc của tập Train. Sự kéo giãn của Detection Lead Time (DLT) và suy giảm FPR được xác lập với mức ý nghĩa thống kê hợp lệ (![][image35]\-value ![][image36]).  
+* **Main Experiment Acceptability (Tiêu chí Thực nghiệm):** Giao thức Chronological Split hoạt động vô ngần; tập Validation và Test tuyệt đối không chứa điểm thời gian nhỏ hơn điểm kết thúc của tập Train. Sự kéo giãn của Detection Lead Time (DLT) và suy giảm FPR được xác lập với mức ý nghĩa thống kê hợp lệ (![][image35]-value ![][image36]).  
 * **Artifact Acceptability (Tiêu chí Hiện vật):** Mọi tệp tin kết quả xuất ra đều được đóng gói vĩnh viễn với tệp cấu hình YAML tương ứng. Cung cấp khả năng truy vết hoàn hảo từ file ảnh phân phối (plots) xuất ra ngược trở lại các siêu tham số huấn luyện ban đầu.
 
 ## **19\. Ma trận Truy vết**
@@ -302,22 +302,22 @@ Nhằm thỏa mãn nguyên tắc cốt lõi của IEEE 1016, Bảng kiểm toán
 | RQ2 | Tác dụng của Time2Vec tới việc giảm báo động giả? | Time-Delta Extractor & Time2Vec Embedding Layer | Mode C1 (Ablation Time) | Độ sụt giảm FPR có ý nghĩa so với Mode A. |
 | RQ3 | Tác dụng của Memory Queue lên khả năng tiên lượng? | Retrieval/Memory Queue (Welford & Mahalanobis) | Mode C2 (Ablation Memory) | Sự gia tăng độ dài của Detection Lead Time (DLT). |
 | H1 | Time2Vec giảm đáng kể FPR. | Phân giải tensor ở Representation Module | Kịch bản B vs Kịch bản A | Giá trị Cohen's ![][image37] cho sự khác biệt FPR. |
-| H2 | Memory Queue kéo dài khoảng đệm thời gian cảnh báo. | Điểm rủi ro lai (Hybrid Score) ở Detection | Kịch bản B vs Kịch bản A | Giá trị ![][image35]\-value Wilcoxon trên DLT. |
-| H3 | Độ trễ tính toán không làm tê liệt hệ thống thời gian thực. | Lớp tối ưu đại số (Ledoit-Wolf & Welford Update) | Mode E (Efficiency Profiler) | Inference Latency \< 10ms, Memory Overhead tính bằng MB. |
+| H2 | Memory Queue kéo dài khoảng đệm thời gian cảnh báo. | Điểm rủi ro lai (Hybrid Score) ở Detection | Kịch bản B vs Kịch bản A | Giá trị ![][image35]-value Wilcoxon trên DLT. |
+| H3 | Độ trễ tính toán không làm tê liệt hệ thống thời gian thực. | Lớp tối ưu đại số (Ledoit-Wolf & Welford Update) | Mode E (Efficiency Profiler) | Inference Latency < 10ms, Memory Overhead tính bằng MB. |
 
 ## **19A. Final Baseline Eligibility Verification**
 
 Trước khi khóa bản thiết kế, phần mềm thiết lập khung thử nghiệm chứng minh rằng Baseline hoàn toàn thỏa mãn triệt để các rào cản cổng hợp lệ (Eligibility Gate).
 
-* \[x\] Baseline được công bố trong khoảng thời gian từ 2023–2026 (LAnoBERT xuất bản 2023).  
-* \[x\] Là journal article chính thức (Đăng trên tạp chí Applied Soft Computing).  
-* \[x\] Đã trải qua quá trình peer-review độc lập.  
-* \[x\] Journal là Q1 hoặc Q2 (Q1 thuộc hệ thống đánh giá SCImago/JCR).  
-* \[x\] Có nguồn xác minh quartile chính thống.  
-* \[x\] Có DOI/metadata publication minh bạch (DOI: 10.1016/j.asoc.2023.110689).  
-* \[x\] Đây chính là baseline đã được phê duyệt hợp pháp trong tài liệu result-6.md6.  
-* \[x\] Không tự ý thay thế baseline bằng các paper khác có chỉ số SOTA nhưng sai nguồn.  
-* \[x\] Baseline, limitation, và improvement không bị thay đổi hoặc điều chỉnh lén lút ngoài Design Freeze.
+* [x] Baseline được công bố trong khoảng thời gian từ 2023–2026 (LAnoBERT xuất bản 2023).  
+* [x] Là journal article chính thức (Đăng trên tạp chí Applied Soft Computing).  
+* [x] Đã trải qua quá trình peer-review độc lập.  
+* [x] Journal là Q1 hoặc Q2 (Q1 thuộc hệ thống đánh giá SCImago/JCR).  
+* [x] Có nguồn xác minh quartile chính thống.  
+* [x] Có DOI/metadata publication minh bạch (DOI: 10.1016/j.asoc.2023.110689).  
+* [x] Đây chính là baseline đã được phê duyệt hợp pháp trong tài liệu result-6.md6.  
+* [x] Không tự ý thay thế baseline bằng các paper khác có chỉ số SOTA nhưng sai nguồn.  
+* [x] Baseline, limitation, và improvement không bị thay đổi hoặc điều chỉnh lén lút ngoài Design Freeze.
 
 ## **20\. Q1/Q2 Ranking và Publication Verification**
 
@@ -328,28 +328,28 @@ Mọi quyết định thiết kế từ việc ứng dụng cấu trúc không p
 ## **21\. Chốt Thiết kế Phần mềm**
 
 Tài liệu này xác nhận **01 Software Design duy nhất** cho toàn bộ quá trình phát triển hệ thống nghiên cứu: Kiến trúc **TAC-LAnoBERT**.  
-Phần mềm nghiên cứu này định nghĩa một đường ống khép kín, lấy LAnoBERT (công bố trên tạp chí Q1, 2023\) làm hạt nhân mã nguồn. Cơ chế cải tiến có mục tiêu được đặc tả chi tiết là việc tiêm vector Động lực học thời gian (Time2Vec) vào không gian nhúng biểu diễn, đồng bộ với việc duy trì một Hàng đợi Bộ nhớ Phiên Liên tục trong không gian VRAM nhằm tính toán độ lệch quỹ đạo bằng khoảng cách Mahalanobis điều chuẩn Ledoit-Wolf. Mô hình nền tảng (BERT Base), bộ tokenizer WordPiece, và hàm tính điểm cục bộ được đóng băng nguyên trạng để bảo vệ ranh giới đối chuẩn. Quá trình kiểm thử và đánh giá sẽ đối chiếu trực diện chế độ Baseline và Improved trên kịch bản dữ liệu phân tách thời gian vật lý (Chronological Split) thông qua các độ đo cảnh báo sớm (DLT, FPR). Kiến trúc đảm bảo khả năng tái lập tối đa thông qua cơ chế quản lý YAML thống nhất, thiết lập hạt giống ngẫu nhiên tĩnh, lưu trữ Artifacts chi tiết và xử lý luồng suy luận trực tuyến ![][image1] vô cùng ưu việt. Hệ thống phần mềm này đặc tả một thiết kế sẵn sàng đáp ứng yêu cầu của thực nghiệm khoa học máy tính nghiêm ngặt.
+Phần mềm nghiên cứu này định nghĩa một đường ống khép kín, lấy LAnoBERT (công bố trên tạp chí Q1, 2023) làm hạt nhân mã nguồn. Cơ chế cải tiến có mục tiêu được đặc tả chi tiết là việc tiêm vector Động lực học thời gian (Time2Vec) vào không gian nhúng biểu diễn, đồng bộ với việc duy trì một Hàng đợi Bộ nhớ Phiên Liên tục trong không gian VRAM nhằm tính toán độ lệch quỹ đạo bằng khoảng cách Mahalanobis điều chuẩn Ledoit-Wolf. Mô hình nền tảng (BERT Base), bộ tokenizer WordPiece, và hàm tính điểm cục bộ được đóng băng nguyên trạng để bảo vệ ranh giới đối chuẩn. Quá trình kiểm thử và đánh giá sẽ đối chiếu trực diện chế độ Baseline và Improved trên kịch bản dữ liệu phân tách thời gian vật lý (Chronological Split) thông qua các độ đo cảnh báo sớm (DLT, FPR). Kiến trúc đảm bảo khả năng tái lập tối đa thông qua cơ chế quản lý YAML thống nhất, thiết lập hạt giống ngẫu nhiên tĩnh, lưu trữ Artifacts chi tiết và xử lý luồng suy luận trực tuyến ![][image1] vô cùng ưu việt. Hệ thống phần mềm này đặc tả một thiết kế sẵn sàng đáp ứng yêu cầu của thực nghiệm khoa học máy tính nghiêm ngặt.
 
 #### **Nguồn trích dẫn**
 
-> 1. IEEE 1016 \- Information Technology—Systems Design—Software, [https://standards.globalspec.com/std/1181513/ieee-1016](https://standards.globalspec.com/std/1181513/ieee-1016)  
-> 2. Software design description \- Wikipedia, [https://en.wikipedia.org/wiki/Software\_design\_description](https://en.wikipedia.org/wiki/Software_design_description)  
+> 1. IEEE 1016 - Information Technology—Systems Design—Software, [https://standards.globalspec.com/std/1181513/ieee-1016](https://standards.globalspec.com/std/1181513/ieee-1016)  
+> 2. Software design description - Wikipedia, [https://en.wikipedia.org/wiki/Software_design_description](https://en.wikipedia.org/wiki/Software_design_description)  
 > 3. Software Design Descriptions (SDD), [https://wildart.github.io/MISG5020/SDD.html](https://wildart.github.io/MISG5020/SDD.html)  
-> 4. IEEE Draft Standard for Software Design Descriptions \- Studylib, [https://studylib.net/doc/18849152/ieee-draft-standard-for-software-design-descriptions](https://studylib.net/doc/18849152/ieee-draft-standard-for-software-design-descriptions)  
-> 5. Research Reproducibility \- IEEE Author Center Magazines, [https://magazines.ieeeauthorcenter.ieee.org/create-your-ieee-magazine-article/research-reproducibility/](https://magazines.ieeeauthorcenter.ieee.org/create-your-ieee-magazine-article/research-reproducibility/)  
+> 4. IEEE Draft Standard for Software Design Descriptions - Studylib, [https://studylib.net/doc/18849152/ieee-draft-standard-for-software-design-descriptions](https://studylib.net/doc/18849152/ieee-draft-standard-for-software-design-descriptions)  
+> 5. Research Reproducibility - IEEE Author Center Magazines, [https://magazines.ieeeauthorcenter.ieee.org/create-your-ieee-magazine-article/research-reproducibility/](https://magazines.ieeeauthorcenter.ieee.org/create-your-ieee-magazine-article/research-reproducibility/)  
 > 6. result-5.md  
 > 7. result-6.md  
-> 8. SDD Iub | PDF | Design | Diagram \- Scribd, [https://www.scribd.com/document/1068238178/SDD-IUB-1](https://www.scribd.com/document/1068238178/SDD-IUB-1)  
-> 9. IEEE Std 1016 \- Software Design Descriptions, [https://segoldmine.ppi-int.com/node/45349](https://segoldmine.ppi-int.com/node/45349)  
+> 8. SDD Iub | PDF | Design | Diagram - Scribd, [https://www.scribd.com/document/1068238178/SDD-IUB-1](https://www.scribd.com/document/1068238178/SDD-IUB-1)  
+> 9. IEEE Std 1016 - Software Design Descriptions, [https://segoldmine.ppi-int.com/node/45349](https://segoldmine.ppi-int.com/node/45349)  
 > 10. result-4.md  
-> 11. software-engineering/materials/ieee-doc-temp.md at main \- GitHub, [https://github.com/drshahizan/software-engineering/blob/main/materials/ieee-doc-temp.md](https://github.com/drshahizan/software-engineering/blob/main/materials/ieee-doc-temp.md)  
-> 12. FUNCTIONAL SPECIFICATIONS \- CORDIS, [https://cordis.europa.eu/docs/projects/cnect/2/619172/080/deliverables/001-sh2oD23SETMOBFunctionalSpecificationsV12.pdf](https://cordis.europa.eu/docs/projects/cnect/2/619172/080/deliverables/001-sh2oD23SETMOBFunctionalSpecificationsV12.pdf)  
+> 11. software-engineering/materials/ieee-doc-temp.md at main - GitHub, [https://github.com/drshahizan/software-engineering/blob/main/materials/ieee-doc-temp.md](https://github.com/drshahizan/software-engineering/blob/main/materials/ieee-doc-temp.md)  
+> 12. FUNCTIONAL SPECIFICATIONS - CORDIS, [https://cordis.europa.eu/docs/projects/cnect/2/619172/080/deliverables/001-sh2oD23SETMOBFunctionalSpecificationsV12.pdf](https://cordis.europa.eu/docs/projects/cnect/2/619172/080/deliverables/001-sh2oD23SETMOBFunctionalSpecificationsV12.pdf)  
 > 13. Software Design Specification: Definition and Template, [https://www.jamasoftware.com/requirements-management-guide/writing-requirements/software-design-specification/](https://www.jamasoftware.com/requirements-management-guide/writing-requirements/software-design-specification/)  
-> 14. IEEE Software Design Document Template | PDF | System \- Scribd, [https://www.scribd.com/document/508518692/software-design-document-2](https://www.scribd.com/document/508518692/software-design-document-2)  
-> 15. [unknown\_url](http://docs.google.com/unknown_url)  
+> 14. IEEE Software Design Document Template | PDF | System - Scribd, [https://www.scribd.com/document/508518692/software-design-document-2](https://www.scribd.com/document/508518692/software-design-document-2)  
+> 15. [unknown_url](http://docs.google.com/unknown_url)  
 > 16. 7 Essential Sample Software Design Documentation Resources for, [https://www.documind.chat/blog/sample-software-design-documentation](https://www.documind.chat/blog/sample-software-design-documentation)  
-> 17. 1016-2009 \- IEEE Standard for Software Design Descriptions (SDDs), [https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541](https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541)  
-> 18. NEDO-33226, Rev. 2, "ESBWR Licensing Topical Report \- Software, [https://www.nrc.gov/docs/ML0721/ML072120425.pdf](https://www.nrc.gov/docs/ML0721/ML072120425.pdf)
+> 17. 1016-2009 - IEEE Standard for Software Design Descriptions (SDDs), [https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541](https://www.studocu.vn/vn/document/truong-dai-hoc-kinh-te/phuong-phap-nghien-cuu-kinh-te/1016-2009-iso-standards/117196541)  
+> 18. NEDO-33226, Rev. 2, "ESBWR Licensing Topical Report - Software, [https://www.nrc.gov/docs/ML0721/ML072120425.pdf](https://www.nrc.gov/docs/ML0721/ML072120425.pdf)
 
 [image1]: <data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAaCAYAAAAue6XIAAABwklEQVR4Xu2WTytEURjGH/9ZEAvKAgufQWQjf8IHUCxkslD2SvIRlJIsfAcfwYaNZCU2oiyQBRaUQv6+r3MuM49773tGQ9H86qnxO89953TnzjFAkb/DIAuDZkkpy+/QJlmVrEjqaC2OackcywBeWeTDEtyACf93q+RCcv/R+EqL5JxlFvVI3lSl5IWlhX4cOnCTFzxPSB6q11WTa5Sc+LUoSWxJFlmmocOOWWbRB9fpJ98teSDHWJstQ/p6Dmewy9GdXyP/CPtZtTar6PoAS6YHrrhBnmmA612TV1dDjgnZ7IFkhyWjd0YH8TPHjMP1drNcrXcWIZudh90JGqQcwvX0iIro9c4i5D3GYHSaEDZIietNxrg44q5lOmF0om/hHS8QI3A9PtYy3luEbLYDdidoUFKnC/GeSbo+m1HYHdwgvRQd7BW8gM8TwiJks3r8WZ13tLTHUriEOy3S0Gv1X2YaIZvdR+5Jk8oV3MBtuGdYX+tDb6G9GZYePZP1N8Opj77mczpC5wyxLDSzkluWeVIC+84XDH2jcpZ5sC5ZZvlTDEuOWAaivzmeWf40C5IplgH8+kYjMiwM2iVVLIsU+Q+8AcPof4U5yGDQAAAAAElFTkSuQmCC>
 
