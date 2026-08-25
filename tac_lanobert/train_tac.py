@@ -233,7 +233,6 @@ def train_tac(cfg, vocab_file: Optional[str] = None) -> str:
         logging_steps=int(tcfg.get("logging_steps", 1000)),
         dataloader_num_workers=0 if _has_mps else 4,
         report_to=["tensorboard"],
-        save_safetensors=False,
     )
 
     trainer = Trainer(

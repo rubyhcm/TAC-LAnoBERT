@@ -191,6 +191,23 @@ class TACLAnoBERT(nn.Module):
 
         return combined_embeddings
 
+    def state_dict(self, *args, **kwargs):
+        """Override state_dict to strip tied weights.
+        
+        Transformers >= 4.38 saves using safetensors by default, which throws an
+        error if multiple tensors share the same physical memory.
+        Since we wrap BertForMaskedLM inside nn.Module, Trainer's safetensors logic 
+        doesn't auto-detect our tied weights. We manually strip the duplicate here.
+        When loading via load_state_dict(strict=False), PyTorch's tied parameters 
+        will auto-populate from the word_embeddings.
+        """
+        state = super().state_dict(*args, **kwargs)
+        if "bert.cls.predictions.decoder.weight" in state:
+            del state["bert.cls.predictions.decoder.weight"]
+        if "bert.cls.predictions.decoder.bias" in state:
+            del state["bert.cls.predictions.decoder.bias"]
+        return state
+
     def forward(
         self,
         input_ids: torch.Tensor,
