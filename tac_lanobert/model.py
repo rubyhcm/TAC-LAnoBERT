@@ -93,6 +93,9 @@ class TACLAnoBERT(nn.Module):
         tac_config: TAC feature configuration
     """
     
+    # Required by HF Trainer when load_best_model_at_end=True
+    _keys_to_ignore_on_save = None
+    
     def __init__(self, bert_config: BertConfig, tac_config: TACConfig):
         super().__init__()
         
