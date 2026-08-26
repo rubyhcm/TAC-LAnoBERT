@@ -135,7 +135,7 @@ class TimestampExtractor:
         Returns:
             Normalized delta_t for Time2Vec input
         """
-        return np.log1p(delta_t_ms)  # log(1 + x) is more stable than log(x)
+        return np.log1p(max(0.0, delta_t_ms))  # clip to 0 to avoid NaN on negative delta
 
 
 def extract_timestamps_from_file(

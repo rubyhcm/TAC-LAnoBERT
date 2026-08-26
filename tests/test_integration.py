@@ -20,7 +20,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from transformers import BertTokenizer
-from lanobert.dataset import LogLineDataset
+from tac_lanobert.dataset_tac import TACLogLineDataset
 from tac_lanobert.model import TACLAnoBERT, TACConfig
 from tac_lanobert.time_delta import TimestampExtractor
 from transformers import BertConfig
@@ -88,14 +88,13 @@ class TestIntegration:
             assert timestamps[i] >= timestamps[i-1], "Timestamps should be monotonic"
     
     def test_dataset_with_time2vec(self, tokenizer, sample_logs, temp_dir):
-        """Test LogLineDataset with Time2Vec enabled."""
+        """Test TACLogLineDataset with Time2Vec enabled."""
         log_path, _ = sample_logs
         
-        dataset = LogLineDataset(
+        dataset = TACLogLineDataset(
             tokenizer=tokenizer,
             file_path=log_path,
             max_len=128,
-            use_time2vec=True,
             log_format='bgl'
         )
         

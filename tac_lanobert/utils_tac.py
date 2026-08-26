@@ -39,7 +39,12 @@ def load_config(path: str) -> Config:
 
 
 def set_seed(seed: int = 42) -> None:
-    """Seed python, numpy and torch (if available) for reproducibility."""
+    """Seed python, numpy and torch (if available) for reproducibility.
+    
+    Also enables deterministic CUDA operations for full reproducibility.
+    Note: This may slightly reduce performance but ensures identical results
+    across runs with the same seed.
+    """
     random.seed(seed)
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
@@ -48,6 +53,21 @@ def set_seed(seed: int = 42) -> None:
 
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        
+        # Enable deterministic operations (critical for Phase 1 requirements)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        
+        # For PyTorch >= 1.8: additional deterministic flag
+        try:
+            torch.use_deterministic_algorithms(True)
+        except AttributeError:
+            # Older PyTorch version
+            pass
+        
+        # Set environment variable for CUDA operations
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+        
     except ImportError:
         pass
 

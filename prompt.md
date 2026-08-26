@@ -4,6 +4,28 @@ các code change hiện tại là code của pharse-3 trong Plan.md, bạn hãy 
 
 source venv/bin/activate
 
+python3 -m tac_lanobert.split_tac --config configs/bgl_tac_full.yaml
+
+python3 -m tac_lanobert.preprocess_tac \
+ --config configs/bgl_tac_full.yaml \
+ --split train \
+ --extract_timestamps
+
+python3 -m tac_lanobert.preprocess_tac \
+ --config configs/bgl_tac_full.yaml \
+ --split test \
+ --extract_timestamps
+
+python3 -m tac_lanobert.tokenizer_tac --config configs/bgl_tac_full.yaml
+
+python3 -m tac_lanobert.train_tac --config configs/bgl_tac_full.yaml
+
+python3 -m tac_lanobert.train_tac --config configs/bgl_tac_local_fast.yaml
+
+---
+
+source venv/bin/activate
+
 python3 -m lanobert.split --config configs/bgl_tac_full.yaml
 
 python3 -m lanobert.preprocess \

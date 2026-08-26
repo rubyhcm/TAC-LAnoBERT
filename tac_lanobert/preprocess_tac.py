@@ -22,7 +22,8 @@ from typing import Iterable, List, Optional, Tuple
 
 from tqdm import tqdm
 
-from .utils import ensure_dir, load_config
+from .utils_tac import ensure_dir, load_config
+from tac_lanobert.time_delta import TimestampExtractor
 
 # Pre-compiled regexes (compiled once, reused per line).
 _BLOCK_ID_RE = re.compile(r"blk_-?\d+")
@@ -222,21 +223,35 @@ def _options_from_config(cfg) -> ParseOptions:
     )
 
 
-def preprocess_file(in_path: str, out_path: str, opt: ParseOptions) -> int:
-    """Normalize every line of `in_path` and write to `out_path`. Returns line count."""
+def preprocess_tac_file(
+    in_path: str,
+    out_path: str,
+    opt: ParseOptions,
+    log_format: str = "bgl",
+) -> int:
+    """Normalize every line of `in_path` and write to `out_path`. Extract timestamps for TAC."""
     ensure_dir(os.path.dirname(out_path) or ".")
+    
     n = 0
-    with open(out_path, "w", encoding="utf-8") as out:
+    ts_extractor = TimestampExtractor(log_format=log_format)
+    timestamp_path = os.path.splitext(out_path)[0] + ".timestamps"
+    
+    with open(out_path, "w", encoding="utf-8") as out, \
+         open(timestamp_path, "w", encoding="utf-8") as ts_file:
         for line in tqdm(iter_lines(in_path), desc=f"parse {os.path.basename(in_path)}"):
             norm = normalize_line(line, opt)
             if norm:
                 out.write(norm + "\n")
+                ts = ts_extractor.extract_timestamp(line)
+                ts_file.write(f"{ts if ts is not None else 0.0}\n")
                 n += 1
+                
+    print(f"[preprocess_tac] saved timestamps -> {timestamp_path}")
     return n
 
 
 def main(argv: Optional[List[str]] = None) -> None:
-    parser = argparse.ArgumentParser(description="LAnoBERT log preprocessing")
+    parser = argparse.ArgumentParser(description="TAC-LAnoBERT log preprocessing")
     parser.add_argument("--config", required=True, help="path to a dataset yaml config")
     parser.add_argument(
         "--split",
@@ -246,6 +261,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     )
     parser.add_argument("--in_path", default=None, help="override input log path")
     parser.add_argument("--out_path", default=None, help="override output path")
+    parser.add_argument("--extract_timestamps", action="store_true", help="(ignored, always extracts)")
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -259,11 +275,13 @@ def main(argv: Optional[List[str]] = None) -> None:
         in_path = args.in_path or cfg.get_path("paths.test_raw")
         out_path = args.out_path or cfg.get_path("paths.test_log")
 
-    print(f"[preprocess] {cfg.get('dataset')} / {args.split}")
-    print(f"[preprocess] in : {in_path}")
-    print(f"[preprocess] out: {out_path}")
-    count = preprocess_file(in_path, out_path, opt)
-    print(f"[preprocess] wrote {count} lines")
+    log_format = cfg.get("dataset", "bgl").lower()
+
+    print(f"[preprocess_tac] {cfg.get('dataset')} / {args.split}")
+    print(f"[preprocess_tac] in : {in_path}")
+    print(f"[preprocess_tac] out: {out_path}")
+    count = preprocess_tac_file(in_path, out_path, opt, log_format=log_format)
+    print(f"[preprocess_tac] wrote {count} lines")
 
 
 if __name__ == "__main__":

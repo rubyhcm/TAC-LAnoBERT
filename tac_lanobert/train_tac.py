@@ -24,9 +24,9 @@ from transformers import (
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lanobert.dataset import LogLineDataset
-from lanobert.tokenizer import load_tokenizer, vocab_path_for
-from lanobert.utils import ensure_dir, load_config, set_seed
+from tac_lanobert.dataset_tac import TACLogLineDataset
+from tac_lanobert.tokenizer_tac import load_tokenizer, vocab_path_for
+from tac_lanobert.utils_tac import ensure_dir, load_config, set_seed
 
 from .model import TACLAnoBERT, TACConfig
 
@@ -166,13 +166,22 @@ def train_tac(cfg, vocab_file: Optional[str] = None) -> str:
     
     print(f"[train_tac] loading dataset (Time2Vec={'enabled' if use_time2vec else 'disabled'})")
     
-    full_dataset = LogLineDataset(
-        tokenizer=tokenizer,
-        file_path=cfg.get_path("paths.train_normal"),
-        max_len=max_len,
-        use_time2vec=use_time2vec,
-        log_format=log_format,
-    )
+    if use_time2vec:
+        full_dataset = TACLogLineDataset(
+            tokenizer=tokenizer,
+            file_path=cfg.get_path("paths.train_normal"),
+            max_len=max_len,
+            log_format=log_format,
+            load_timestamps=True,
+        )
+    else:
+        full_dataset = TACLogLineDataset(
+            tokenizer=tokenizer,
+            file_path=cfg.get_path("paths.train_normal"),
+            max_len=max_len,
+            log_format=log_format,
+            load_timestamps=False,
+        )
 
     # Train/eval split
     eval_ratio = float(tcfg.get("eval_ratio", 0.01))
