@@ -6,15 +6,15 @@ Before running the notebook, ensure you have:
 
 1. ✅ **Phase 2 Baseline** trained → `outputs/BGL_lanobert/`
 2. ✅ **Phase 3 TAC Model** trained → `outputs/BGL_tac/`
-3. ✅ **BGL Dataset** (raw log file)
+3. ✅ **BGL Preprocessed Data** → `data/BGL/` (includes splits & parsed files)
 
 ---
 
 ## 🚀 Kaggle Setup Instructions
 
-### Step 1: Upload Phase 2 & Phase 3 Outputs as Kaggle Datasets
+### Step 1: Upload Phase 2, Phase 3 & BGL Data as Kaggle Datasets
 
-Since Kaggle notebooks can't access local files, you need to upload your trained models:
+Since Kaggle notebooks can't access local files, you need to upload your trained models and preprocessed data:
 
 #### 1.1. Create Phase 2 Dataset
 
@@ -46,7 +46,33 @@ Then:
 4. Title: `TAC-LAnoBERT Phase 3 TAC Model`
 5. Click **"Create"**
 
-> **Note**: You can combine both into one dataset if preferred.
+#### 1.3. Create BGL Preprocessed Data Dataset (⚡ RECOMMENDED)
+
+**Why?** Upload preprocessed data instead of raw BGL.log to save ~30 minutes of preprocessing time!
+
+```bash
+# On your local machine
+cd TAC-LAnoBERT
+zip -r BGL_data.zip data/BGL/
+```
+
+**What's included:**
+- `BGL_test.raw` - Raw test split
+- `BGL_test_parsed.log` - Preprocessed test logs
+- `BGL_test_label.log` - Test labels
+- `BGL_test_parsed.timestamps` - Timestamps
+- `BGL_train_normal.raw` - Raw training split
+- `BGL_train_normal_parsed.log` - Preprocessed training logs
+- `BGL_train_normal_parsed.timestamps` - Training timestamps
+
+Then:
+1. Go to https://www.kaggle.com/datasets
+2. Click **"New Dataset"**
+3. Upload `BGL_data.zip`
+4. Title: `BGL Preprocessed Data for TAC-LAnoBERT`
+5. Click **"Create"**
+
+> **Note**: You can combine all 3 datasets into one if preferred, but separating them makes it easier to reuse.
 
 ---
 
@@ -67,7 +93,10 @@ In your Kaggle notebook:
 2. Search and add:
    - Your uploaded Phase 2 dataset (`BGL_lanobert`)
    - Your uploaded Phase 3 dataset (`BGL_tac`)
-   - BGL raw log dataset (search "BGL log" in Kaggle datasets)
+   - Your uploaded BGL preprocessed data (`BGL_data`) ⚡ **Recommended**
+   
+   OR (if you didn't upload preprocessed data):
+   - BGL raw log dataset (search "BGL log" - will take longer to preprocess)
 
 ---
 
@@ -85,20 +114,25 @@ Click **"Run All"** or run cells sequentially.
 The notebook will:
 1. ✅ Clone TAC-LAnoBERT repo
 2. ✅ Copy Phase 2/3 outputs from `/kaggle/input/` to `outputs/`
-3. ✅ Verify all artifacts
-4. ✅ Run TAC inference (Memory Queue + Hybrid Scoring)
-5. ✅ Compare metrics (E1, E2)
-6. ✅ Calculate DLT & EWR (E3)
-7. ✅ Generate JSON reports
+3. ✅ Copy preprocessed BGL data (if available) OR split & preprocess raw BGL.log
+4. ✅ Verify all artifacts
+5. ✅ Run TAC inference (Memory Queue + Hybrid Scoring)
+6. ✅ Compare metrics (E1, E2)
+7. ✅ Calculate DLT & EWR (E3)
+8. ✅ Generate JSON reports
 
 ---
 
 ## ⏱️ Expected Runtime
 
-- **Total**: ~3 hours on T4 GPU
+- **With preprocessed BGL data**: ~2.5 hours on T4 GPU
   - E1 (Baseline verification): ~5 min
   - E2 (TAC inference): ~2h
-  - E3 (DLT analysis): ~1h
+  - E3 (DLT analysis): ~30 min
+
+- **Without preprocessed data** (raw BGL.log): ~3 hours on T4 GPU
+  - Data splitting & preprocessing: +30 min
+  - Rest same as above
 
 ---
 
@@ -134,11 +168,12 @@ outputs/
 
 **Solution**: Same as above, but for Phase 3 dataset (`BGL_tac`)
 
-### Error: "BGL.log not found"
+### Error: "BGL.log not found" or "BGL test data not found"
 
 **Solution**: 
-1. Search "BGL log" in Kaggle datasets
-2. Add the BGL dataset to your notebook
+1. **Recommended**: Upload preprocessed BGL data (Step 1.3) - saves 30 minutes!
+2. **Alternative**: Search "BGL log" in Kaggle datasets and add to notebook
+3. The notebook will automatically split & preprocess if needed
 
 ### Error: Out of Memory (OOM)
 
@@ -152,6 +187,11 @@ TAC inference is slower than baseline due to:
 - Memory Queue operations (Welford updates)
 - Mahalanobis distance calculation
 - Expected: ~2h for BGL test set (~1.1M lines)
+
+**Tips to speed up:**
+- Use preprocessed BGL data (saves 30 min)
+- Reduce `queue_capacity` in config (128 → 64) if OOM
+- Ensure GPU is enabled (T4 x2 recommended)
 
 ---
 
@@ -199,7 +239,60 @@ Once Phase 4 completes:
 
 ---
 
-## 📧 Support
+## 📦 Quick Commands Reference
+
+### Automated Script (⚡ Recommended)
+
+```bash
+# Run helper script to create all zips at once
+bash scripts/prepare_kaggle_datasets.sh
+```
+
+This script will:
+- ✅ Check all prerequisites exist
+- ✅ Create `BGL_lanobert.zip` (Phase 2)
+- ✅ Create `BGL_tac.zip` (Phase 3)  
+- ✅ Create `BGL_data.zip` (preprocessed data) if available
+- ✅ Show file sizes and next steps
+
+### Manual Commands
+
+```bash
+# On your local machine, from TAC-LAnoBERT root directory
+
+# 1. Phase 2 Baseline (~100MB)
+zip -r BGL_lanobert.zip outputs/BGL_lanobert/
+
+# 2. Phase 3 TAC Model (~100MB)
+zip -r BGL_tac.zip outputs/BGL_tac/
+
+# 3. BGL Preprocessed Data (~50MB) ⚡ RECOMMENDED
+zip -r BGL_data.zip data/BGL/
+
+# Verify zip files
+ls -lh *.zip
+```
+
+### What's in BGL_data.zip?
+
+```
+data/BGL/
+├── BGL.log                              # Original raw log (optional)
+├── BGL_test.raw                         # Test split (raw)
+├── BGL_test_parsed.log                  # Test split (preprocessed) ✓
+├── BGL_test_label.log                   # Test labels ✓
+├── BGL_test_parsed.timestamps           # Test timestamps ✓
+├── BGL_train_normal.raw                 # Train split (raw)
+├── BGL_train_normal_parsed.log          # Train split (preprocessed) ✓
+├── BGL_train_normal_parsed.timestamps   # Train timestamps ✓
+└── split_stats.json                     # Split statistics
+```
+
+**Files marked with ✓ are essential for Phase 4.**
+
+---
+
+## �📧 Support
 
 If you encounter issues not covered here:
 

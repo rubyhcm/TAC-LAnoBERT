@@ -32,3 +32,6 @@ venv/
 
 # local symlink to scratch storage (user-specific)
 /outputs
+BGL_lanobert.zip
+BGL_tac.zip
+BGL_data.zip
