@@ -58,7 +58,7 @@ train:
 inference:
   hf_model: null
   hf_subfolder: null
-  score: hybrid # Use hybrid scoring (MLM + Mahalanobis)
+  score: mean # Match Phase 2 baseline (error_mean uses mean aggregation)
   top_k: 5
   top_ks: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   batch_size: 16
