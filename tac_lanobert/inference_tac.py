@@ -435,21 +435,90 @@ class TACInferenceScorer:
 
         with torch.no_grad():
             out = self.base.model(**enc, output_hidden_states=True)
-            # last_hidden_state[:, 0, :] is the [CLS] token
             if hasattr(out, "hidden_states") and out.hidden_states is not None:
                 cls_vec = out.hidden_states[-1][:, 0, :].squeeze(0)
             else:
-                # Fallback: run encoder directly and grab first token
-                hidden = out.logits  # shape (1, seq, vocab) — not ideal
-                # safer: re-run through base model requesting hidden_states
                 out2 = self.base.model(
-                    **enc,
-                    output_hidden_states=True,
-                    return_dict=True,
+                    **enc, output_hidden_states=True, return_dict=True,
                 )
                 cls_vec = out2.hidden_states[-1][:, 0, :].squeeze(0)
 
         return cls_vec.detach().cpu().numpy()
+
+    def _extract_cls_batch(
+        self,
+        unique_lines: "Sequence[str]",
+        cls_batch_size: int = 64,
+    ) -> "dict[str, np.ndarray]":
+        """Extract [CLS] vectors for a list of *unique* lines in batches.
+
+        Returns a dict mapping line -> (hidden_dim,) numpy array.
+        Batching here means a single tokenizer call + single BERT forward pass
+        per batch of ``cls_batch_size`` lines, which is 10-30x faster than
+        calling ``_extract_cls`` one line at a time.
+        """
+        import torch
+
+        cls_cache: dict = {}
+        for start in tqdm(
+            range(0, len(unique_lines), cls_batch_size),
+            desc="[tac] extracting CLS (batched)",
+            unit="batch",
+        ):
+            batch_lines = unique_lines[start : start + cls_batch_size]
+            enc = self.base.tokenizer(
+                list(batch_lines),
+                truncation=True,
+                max_length=self.base.max_len,
+                padding=True,
+                return_tensors="pt",
+            ).to(self.device)
+            with torch.no_grad():
+                out = self.base.model(**enc, output_hidden_states=True)
+                if hasattr(out, "hidden_states") and out.hidden_states is not None:
+                    # shape: (batch, seq, hidden) -> take [CLS] token
+                    cls_batch = out.hidden_states[-1][:, 0, :]  # (batch, hidden)
+                else:
+                    out2 = self.base.model(
+                        **enc, output_hidden_states=True, return_dict=True,
+                    )
+                    cls_batch = out2.hidden_states[-1][:, 0, :]
+            cls_np = cls_batch.detach().cpu().numpy()  # (batch, hidden)
+            for i, ln in enumerate(batch_lines):
+                cls_cache[ln] = cls_np[i]
+        return cls_cache
+
+    def _build_mlm_cache(
+        self,
+        lines: "Sequence[str]",
+        score: str,
+        top_k: int,
+        batch_size: int,
+        mask_unit: str,
+    ) -> "dict[str, tuple[float, float]]":
+        """Dedup-cache MLM (error, prob) scores for unique lines.
+
+        BGL logs are ~80% duplicates.  Scoring each unique line once and
+        looking up duplicates is the same optimisation the baseline uses
+        (``score_corpus`` with ``dedup=True``).  MLM is stateless so dedup
+        is safe; only the Mahalanobis / Memory Queue step is order-sensitive.
+        """
+        uniques = list(dict.fromkeys(lines))  # preserve insertion order
+        pct_saved = 100 * (1 - len(uniques) / max(len(lines), 1))
+        print(
+            f"[tac] MLM dedup: {len(lines):,} lines -> {len(uniques):,} unique "
+            f"({pct_saved:.1f}% duplicate — skipping redundant BERT passes)"
+        )
+        mlm_cache: dict = {}
+        for ln in tqdm(uniques, desc="[tac] MLM scoring (deduped)"):
+            mlm_cache[ln] = self.base.score_line(
+                ln,
+                score=score,
+                top_k=top_k,
+                batch_size=batch_size,
+                mask_unit=mask_unit,
+            )
+        return mlm_cache
 
     # ------------------------------------------------------------------
     # Public API
@@ -472,6 +541,8 @@ class TACInferenceScorer:
             ``mahalanobis`` — Mahalanobis distance (−1 if queue not ready)
             ``hybrid``      — hybrid score (alpha·mlm + (1-alpha)·mahal)
         """
+        import torch
+
         # 1. Standard MLM scoring
         mlm_err, mlm_prob = self.base.score_line(
             line, score=score, top_k=top_k,
@@ -483,12 +554,10 @@ class TACInferenceScorer:
         mahal = self.memory_queue.mahalanobis_distance(cls_np)
 
         # 3. Push [CLS] into queue (update running stats for next line)
-        import torch
         self.memory_queue.push(torch.from_numpy(cls_np))
 
-        # 4. Hybrid score (use mlm_err as the reactive signal)
+        # 4. Hybrid score
         if mahal < 0:
-            # Queue not ready yet — fall back to pure MLM
             hybrid = float(mlm_err)
         else:
             hybrid = self.scorer.score(float(mlm_err), float(mahal))
@@ -507,26 +576,61 @@ class TACInferenceScorer:
         top_k: int = 5,
         batch_size: int = 64,
         mask_unit: str = "word",
+        cls_batch_size: int = 64,
     ) -> dict:
-        """
-        Score every line in order with the TAC pipeline.
+        """Score every line in order with the TAC pipeline.
 
-        Note: lines are scored sequentially (not deduped) because the memory
-        queue must observe them in temporal order to track session context.
+        Two-phase optimisation for large corpora (e.g. BGL ~1.25 M lines):
+
+        **Phase A — MLM dedup cache** (stateless; safe to dedup)
+            Score each *unique* log line once with the MLM head and cache the
+            result.  BGL has ~80% duplicate lines, so this eliminates ~80% of
+            the most expensive BERT forward passes (N_mask passes per line).
+
+        **Phase B — Batched CLS extraction** (stateless; safe to batch)
+            Extract [CLS] vectors for unique lines in batches of
+            ``cls_batch_size``.  A single tokenize+forward call per batch is
+            10-30x faster than one call per line.
+
+        **Phase C — Sequential Mahalanobis** (stateful; must stay in order)
+            Walk lines in temporal order, look up the cached MLM score and CLS
+            vector, compute Mahalanobis distance against the Memory Queue, push
+            the CLS vector into the queue, then combine into the hybrid score.
+            This loop is cheap (pure numpy/CPU) so sequential is fine.
 
         Returns a dict mapping score names to ``np.ndarray`` aligned to ``lines``:
             ``mlm_error``, ``mlm_prob``, ``mahalanobis``, ``hybrid``
         """
+        import torch
+
+        # ── Phase A: dedup-cached MLM scoring ────────────────────────────────
+        mlm_cache = self._build_mlm_cache(
+            lines, score=score, top_k=top_k,
+            batch_size=batch_size, mask_unit=mask_unit,
+        )
+
+        # ── Phase B: batched CLS extraction for unique lines ─────────────────
+        uniques = list(dict.fromkeys(lines))
+        cls_cache = self._extract_cls_batch(uniques, cls_batch_size=cls_batch_size)
+
+        # ── Phase C: sequential Mahalanobis + hybrid (cheap, CPU) ────────────
         mlm_errors, mlm_probs, mahals, hybrids = [], [], [], []
-        for line in tqdm(lines, desc="[tac] scoring"):
-            result = self.score_line_tac(
-                line, score=score, top_k=top_k,
-                batch_size=batch_size, mask_unit=mask_unit,
-            )
-            mlm_errors.append(result["mlm_error"])
-            mlm_probs.append(result["mlm_prob"])
-            mahals.append(result["mahalanobis"])
-            hybrids.append(result["hybrid"])
+        for line in tqdm(lines, desc="[tac] Mahalanobis + hybrid"):
+            mlm_err, mlm_prob = mlm_cache[line]
+            cls_np = cls_cache[line]
+
+            mahal = self.memory_queue.mahalanobis_distance(cls_np)
+            self.memory_queue.push(torch.from_numpy(cls_np))
+
+            if mahal < 0:
+                hybrid = float(mlm_err)
+            else:
+                hybrid = self.scorer.score(float(mlm_err), float(mahal))
+
+            mlm_errors.append(float(mlm_err))
+            mlm_probs.append(float(mlm_prob))
+            mahals.append(float(mahal))
+            hybrids.append(hybrid)
 
         return {
             "mlm_error": np.asarray(mlm_errors),
