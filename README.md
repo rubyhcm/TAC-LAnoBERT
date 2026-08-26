@@ -6,7 +6,7 @@
 
 **Enhanced Log Anomaly Detection with Temporal Dynamics and Session Memory**
 
-**Phase 1: ✅ Complete** | **Phase 2: ✅ Complete** | **Phase 3: 🔄 70% Complete (Runtime Verification Pending)**
+**Phase 1: ✅ Complete** | **Phase 2: ✅ Complete** | **Phase 3: ✅ Complete** | **Phase 4: 🟡 In Progress (E1 ✅)**
 
 </div>
 
@@ -23,7 +23,8 @@
 ### Research Goal
 
 Transform **reactive anomaly detection** into **proactive early warning system** that can:
-- Alert *before* system failures occur (Detection Lead Time > 0)
+
+- Alert _before_ system failures occur (Detection Lead Time > 0)
 - Reduce False Positive Rate in dynamic workload scenarios
 - Maintain parser-free simplicity and reproducibility
 
@@ -32,18 +33,21 @@ Transform **reactive anomaly detection** into **proactive early warning system**
 ## 🚀 Quick Start (Phase 1 Complete)
 
 ### Prerequisites
+
 ```bash
 # Python 3.10+, PyTorch 2.1+, CUDA 12.1+
 pip install -r requirements.txt
 ```
 
 ### Verify Phase 1 Setup
+
 ```bash
 # Run comprehensive verification
 bash scripts/verify_phase1.sh
 ```
 
 This checks:
+
 - ✅ Directory structure
 - ✅ Datasets (BGL, Thunderbird)
 - ✅ Anti-leakage tests (7/7)
@@ -51,6 +55,7 @@ This checks:
 - ✅ Reproducibility settings
 
 ### Docker Setup (Recommended)
+
 ```bash
 # Build and run container
 docker-compose build
@@ -64,6 +69,7 @@ bash scripts/verify_phase1.sh
 See [`DOCKER_SETUP.md`](DOCKER_SETUP.md) for details.
 
 ### Run Baseline (Phase 2)
+
 ```bash
 # Train LAnoBERT baseline on BGL
 bash scripts/run_pipeline.sh configs/bgl.yaml
@@ -81,11 +87,11 @@ These per-word signals are pooled into a line score (by mean or top-k). We recom
 
 **Main results (from-scratch BERT, batch 32), AUROC / best-F1:**
 
-| dataset      | `error_mean` (recommended) | fixed top-k (k=5) |
-| ---          | ---                        | ---               |
-| BGL          | **1.000 / 1.000**          | 1.000 / 0.999     |
-| HDFS         | **0.997 / 0.969**          | 0.928 / 0.919     |
-| Thunderbird  | **1.000 / 1.000**          | 1.000 / 0.999     |
+| dataset     | `error_mean` (recommended) | fixed top-k (k=5) |
+| ----------- | -------------------------- | ----------------- |
+| BGL         | **1.000 / 1.000**          | 1.000 / 0.999     |
+| HDFS        | **0.997 / 0.969**          | 0.928 / 0.919     |
+| Thunderbird | **1.000 / 1.000**          | 1.000 / 0.999     |
 
 ## Released checkpoints (HuggingFace Hub)
 
@@ -126,7 +132,35 @@ bash scripts/download_data.sh tbird   # -> data/Thunderbird/Thunderbird.log
 
 ## Usage
 
-Run the full pipeline (split → preprocess → tokenizer → train → inference):
+The project is now divided into two architectures: the **Proactive TAC-LAnoBERT** and the **Reactive LAnoBERT Baseline**.
+
+### Run TAC-LAnoBERT (Proactive ELAD)
+
+This pipeline extracts physical timestamps, initializes the Memory Queue, and runs the Hybrid Proactive Scorer.
+
+```bash
+# 1. Split data
+python -m tac_lanobert.split_tac      --config configs/bgl_tac_full.yaml
+
+# 2. Preprocess and extract timestamps
+python -m tac_lanobert.preprocess_tac --config configs/bgl_tac_full.yaml --split train --extract_timestamps
+python -m tac_lanobert.preprocess_tac --config configs/bgl_tac_full.yaml --split test --extract_timestamps
+
+# 3. Train Tokenizer
+python -m tac_lanobert.tokenizer_tac  --config configs/bgl_tac_full.yaml
+
+# 4. Train Model (with Time2Vec)
+python -m tac_lanobert.train_tac      --config configs/bgl_tac_full.yaml
+
+# 5. Run Inference (Memory Queue + Mahalanobis Hybrid Scoring)
+python -m tac_lanobert.inference_tac  --config configs/bgl_tac_full.yaml
+```
+
+### Run LAnoBERT Baseline (Reactive)
+
+The baseline is preserved in the `lanobert/` directory as a read-only reference.
+
+Run the full pipeline via script:
 
 ```bash
 bash scripts/run_pipeline.sh configs/bgl.yaml
@@ -149,12 +183,12 @@ Results (AUROC/F1 report, ROC png, `scores_*.npy`) are written to `outputs/<data
 
 Every variant uses the same BERT encoder; they differ only in the vocabulary and how the weights are trained. The released checkpoints are the main model (row 1). Each cell is **AUROC / best-F1**: top line `error_mean`, bottom line fixed top-k (k=5).
 
-| # | Vocabulary | Training | BGL | HDFS | Thunderbird |
-| --- | --- | --- | --- | --- | --- |
-| 1 | log-specific (main) | from-scratch | **1.000 / 1.000**<br>1.000 / 0.999 | **0.997 / 0.969**<br>0.928 / 0.919 | **1.000 / 1.000**<br>1.000 / 0.999 |
-| 2 | `bert-base` | from-scratch (rand-init) | 1.000 / 0.999<br>0.999 / 0.988 | 0.761 / 0.489<br>0.651 / 0.419 | 0.801 / 0.529<br>0.824 / 0.495 |
-| 3 | `bert-base` | TAPT (warm-start) | 0.877 / 0.814<br>0.997 / 0.991 | 0.992 / 0.955<br>0.821 / 0.874 | 0.473 / 0.261<br>0.978 / 0.802 |
-| 4 | `bert-base` | none (off-the-shelf) | 0.394 / 0.528<br>0.231 / 0.436 | 0.961 / 0.761<br>0.587 / 0.559 | 0.915 / 0.720<br>0.826 / 0.516 |
+| #   | Vocabulary          | Training                 | BGL                                | HDFS                               | Thunderbird                        |
+| --- | ------------------- | ------------------------ | ---------------------------------- | ---------------------------------- | ---------------------------------- |
+| 1   | log-specific (main) | from-scratch             | **1.000 / 1.000**<br>1.000 / 0.999 | **0.997 / 0.969**<br>0.928 / 0.919 | **1.000 / 1.000**<br>1.000 / 0.999 |
+| 2   | `bert-base`         | from-scratch (rand-init) | 1.000 / 0.999<br>0.999 / 0.988     | 0.761 / 0.489<br>0.651 / 0.419     | 0.801 / 0.529<br>0.824 / 0.495     |
+| 3   | `bert-base`         | TAPT (warm-start)        | 0.877 / 0.814<br>0.997 / 0.991     | 0.992 / 0.955<br>0.821 / 0.874     | 0.473 / 0.261<br>0.978 / 0.802     |
+| 4   | `bert-base`         | none (off-the-shelf)     | 0.394 / 0.528<br>0.231 / 0.436     | 0.961 / 0.761<br>0.587 / 0.559     | 0.915 / 0.720<br>0.826 / 0.516     |
 
 The main model (row 1) is the only one strong and stable across all three datasets: the log-specific vocabulary is the key factor (rows 1 vs. 2), and the off-the-shelf model (row 4) is weak. Row 1 uses the main config (`configs/<dataset>.yaml`); rows 2–4 use `configs/ablations/<dataset>_{bertbase_init,bertbase_tapt,pretrained}.yaml`.
 

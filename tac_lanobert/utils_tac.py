@@ -1,6 +1,7 @@
 """Shared helpers: config loading, seeding, device, simple namespace access."""
 from __future__ import annotations
 
+import logging
 import os
 import random
 from typing import Any, Dict
@@ -93,3 +94,17 @@ def ensure_dir(path: str) -> str:
     """Create a directory (and parents) if it does not exist; return the path."""
     os.makedirs(path, exist_ok=True)
     return path
+
+
+def setup_logging(level=logging.INFO):
+    """Setup basic logging configuration."""
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # Suppress noisy loggers
+    logging.getLogger('transformers').setLevel(logging.WARNING)
+    logging.getLogger('datasets').setLevel(logging.WARNING)
+    logging.getLogger('tokenizers').setLevel(logging.WARNING)
