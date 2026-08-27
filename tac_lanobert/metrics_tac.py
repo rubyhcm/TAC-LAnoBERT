@@ -46,6 +46,14 @@ def evaluate(
     preds = (scores >= best_threshold).astype(int)
     report = classification_report(labels, preds, digits=4, zero_division=0)
     cm = confusion_matrix(labels, preds)
+    
+    # Calculate FPR from confusion matrix
+    # cm[0,0]=TN, cm[0,1]=FP, cm[1,0]=FN, cm[1,1]=TP
+    tn, fp = cm[0, 0], cm[0, 1] if cm.shape[0] > 1 else (0, 0)
+    fpr_value = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
+    
+    # Calculate PR-AUC
+    pr_auc = float(auc(recall, precision))
 
     out = {
         "auroc": auroc,
@@ -53,6 +61,8 @@ def evaluate(
         "best_threshold": best_threshold,
         "precision": float(precision[best_idx]),
         "recall": float(recall[best_idx]),
+        "fpr": fpr_value,
+        "pr_auc": pr_auc,
     }
 
     print(f"[eval:{tag}] AUROC={auroc:.4f}  best_F1={best_f1:.4f}  thr={best_threshold:.4g}")
